@@ -1,7 +1,14 @@
 import * as THREE from "three";
 
 import { COLORS, createMaterialLibrary, emissive, physical, standard } from "../materials.js";
-import { box, cylinder, markEquipment, tube } from "../primitives.js";
+import { box, createGauge, cylinder, markEquipment, tube } from "../primitives.js";
+
+const AIRFLOW_PARTICLE_COUNT = 84;
+const AIRFLOW_COLORS = Object.freeze({
+  warm: 0xff4d52,
+  cool: 0x18c8ff,
+  supply: 0x55f1df,
+});
 
 const SECTION_ORDER = Object.freeze([
   "intake-louver",
@@ -68,18 +75,41 @@ export function buildMau(options = {}) {
   group.add(outlet);
   internals.push(outlet);
 
+  const airflowZones = createAirflowZones();
+  group.add(airflowZones);
+  internals.push(airflowZones);
+
+  const hydronicControls = createHydronicControls(materials, fluidPaths);
+  group.add(hydronicControls);
+  internals.push(hydronicControls);
+
   const airGroup = new THREE.Group();
   airGroup.name = "mau-airflow";
-  const airMaterial = new THREE.MeshBasicMaterial({ color: 0x73e8df, transparent: true, opacity: 0.76, toneMapped: false, depthWrite: false });
-  for (let index = 0; index < 24; index += 1) {
-    const particle = new THREE.Mesh(new THREE.CapsuleGeometry(0.035, 0.16, 4, 8), airMaterial);
+  const airGeometry = new THREE.CapsuleGeometry(0.024, 0.18, 4, 8);
+  const airMaterials = {
+    warm: createAirMaterial(AIRFLOW_COLORS.warm),
+    cool: createAirMaterial(AIRFLOW_COLORS.cool),
+    supply: createAirMaterial(AIRFLOW_COLORS.supply),
+  };
+  for (let index = 0; index < AIRFLOW_PARTICLE_COUNT; index += 1) {
+    const particle = new THREE.Mesh(airGeometry, airMaterials.warm);
     particle.rotation.z = Math.PI / 2;
-    const laneY = 0.58 + (index % 4) * 0.28;
-    const laneZ = -0.45 + (index % 3) * 0.45;
-    particle.position.set(-3.0 + ((index * 0.41) % 6.0), laneY, laneZ);
+    const laneY = 0.42 + (index % 7) * 0.205 + Math.sin(index * 1.7) * 0.035;
+    const laneZ = -0.58 + (index % 6) * 0.232 + Math.cos(index * 1.3) * 0.025;
+    particle.position.set(-3.04 + ((index * 0.397) % 6.08), laneY, laneZ);
+    particle.scale.set(0.75 + (index % 4) * 0.12, 0.8, 0.8);
     particle.name = `mau-air-particle-${index + 1}`;
+    particle.renderOrder = 8;
     airGroup.add(particle);
-    airflow.push({ mesh: particle, phase: index / 24, minX: -3.02, maxX: 3.02, speed: 0.62 + (index % 5) * 0.04 });
+    airflow.push({
+      mesh: particle,
+      phase: index / AIRFLOW_PARTICLE_COUNT,
+      minX: -3.04,
+      maxX: 3.04,
+      speed: 0.36 + (index % 7) * 0.018,
+      colorZones: [-1.56, -0.82, -0.16],
+      materials: airMaterials,
+    });
   }
   group.add(airGroup);
   internals.push(airGroup);
@@ -93,8 +123,129 @@ export function buildMau(options = {}) {
   group.userData.sectionOrder = [...SECTION_ORDER];
   group.userData.animation = { rotors, airflow, fluidPaths, droplets: humidifier.userData.droplets };
   group.userData.focusPoint = new THREE.Vector3(0, 1.05, 0);
-  group.userData.focusDistance = 8.0;
+  group.userData.focusDistance = 7.15;
   markEquipment(group, id);
+  return group;
+}
+
+function createAirMaterial(color) {
+  return new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: 0.9,
+    toneMapped: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+}
+
+function createAirflowZones() {
+  const group = new THREE.Group();
+  group.name = "mau-airflow-zones";
+  group.add(createAirflowZone("airflow-warm-zone", [-2.26, 1.04, 0], [1.48, 1.42, 1.4], AIRFLOW_COLORS.warm, 0.09));
+  group.add(createAirflowZone("airflow-cool-zone", [-1.13, 1.04, 0], [0.72, 1.42, 1.4], AIRFLOW_COLORS.cool, 0.12));
+  group.add(createAirflowZone("airflow-reheat-zone", [-0.54, 1.04, 0], [0.42, 1.42, 1.4], AIRFLOW_COLORS.warm, 0.08));
+  group.add(createAirflowZone("airflow-supply-zone", [1.42, 1.04, 0], [3.2, 1.42, 1.4], AIRFLOW_COLORS.supply, 0.08));
+  return group;
+}
+
+function createAirflowZone(name, position, size, color, opacity) {
+  const group = new THREE.Group();
+  group.name = name;
+  const glowMaterial = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    toneMapped: false,
+    depthWrite: false,
+    side: THREE.BackSide,
+    blending: THREE.AdditiveBlending,
+  });
+  const glow = box(size, glowMaterial, { position, name: `${name}-glow`, castShadow: false, receiveShadow: false });
+  glow.renderOrder = 2;
+  group.add(glow);
+  const light = new THREE.PointLight(color, name.includes("cool") ? 2.0 : 1.35, 3.1, 2);
+  light.position.fromArray(position);
+  light.name = `${name}-light`;
+  group.add(light);
+  return group;
+}
+
+function createHydronicControls(materials, fluidPaths) {
+  const group = new THREE.Group();
+  group.name = "mau-hydronic-controls";
+  const chwsMaterial = standard(COLORS.chilledSupply, { roughness: 0.2, metalness: 0.58, emissive: COLORS.chilledSupply, emissiveIntensity: 0.34 });
+  const chwrMaterial = standard(COLORS.chilledReturn, { roughness: 0.2, metalness: 0.58, emissive: COLORS.chilledReturn, emissiveIntensity: 0.26 });
+
+  const supply = tube([
+    [-2.78, -0.18, 0.96],
+    [-2.28, -0.18, 0.96],
+    [-1.92, -0.18, 0.96],
+    [-1.78, 0.35, 0.7],
+  ], 0.075, chwsMaterial, { name: "mau-chws-external", tubularSegments: 56 });
+  group.add(supply);
+  fluidPaths.push({ id: "mau-chws-external", curve: supply.userData.curve, color: COLORS.chilledSupply, speed: 0.22, particleCount: 8 });
+
+  const returnPipe = tube([
+    [-1.18, 0.35, 0.7],
+    [-1.04, -0.04, 1.04],
+    [-0.62, -0.04, 1.04],
+    [-0.16, -0.04, 1.04],
+  ], 0.065, chwrMaterial, { name: "mau-chwr-external", tubularSegments: 56 });
+  group.add(returnPipe);
+  fluidPaths.push({ id: "mau-chwr-external", curve: returnPipe.userData.curve, color: COLORS.chilledReturn, speed: 0.18, particleCount: 8 });
+
+  const controlValve = createHydronicValve({
+    name: "mau-chws-control-valve",
+    pipeColor: COLORS.chilledSupply,
+    materials,
+    actuator: true,
+  });
+  controlValve.position.set(-2.28, -0.18, 0.96);
+  group.add(controlValve);
+
+  const balancingValve = createHydronicValve({
+    name: "mau-chwr-balancing-valve",
+    pipeColor: COLORS.chilledReturn,
+    materials,
+    actuator: false,
+  });
+  balancingValve.position.set(-0.62, -0.04, 1.04);
+  group.add(balancingValve);
+
+  const supplyGauge = createGauge({ material: materials.chrome, faceMaterial: materials.cabinet, needleMaterial: materials.darkMetal, name: "mau-chws-pressure-gauge" });
+  supplyGauge.position.set(-1.92, 0.05, 1.04);
+  supplyGauge.scale.setScalar(0.72);
+  group.add(supplyGauge);
+
+  const returnGauge = createGauge({ material: materials.chrome, faceMaterial: materials.cabinet, needleMaterial: materials.darkMetal, name: "mau-chwr-pressure-gauge" });
+  returnGauge.position.set(-1.02, 0.17, 1.12);
+  returnGauge.scale.setScalar(0.72);
+  group.add(returnGauge);
+  return group;
+}
+
+function createHydronicValve({ name, pipeColor, materials, actuator }) {
+  const group = new THREE.Group();
+  group.name = name;
+  const bodyMaterial = standard(pipeColor, { roughness: 0.24, metalness: 0.68, emissive: pipeColor, emissiveIntensity: 0.18 });
+  group.add(cylinder(0.115, 0.42, bodyMaterial, { rotation: [0, 0, Math.PI / 2], segments: 28, name: `${name}-body` }));
+  for (const x of [-0.2, 0.2]) {
+    group.add(cylinder(0.16, 0.055, materials.chrome, { position: [x, 0, 0], rotation: [0, 0, Math.PI / 2], segments: 28, name: `${name}-flange-${x}` }));
+  }
+  group.add(cylinder(0.035, 0.18, materials.brass, { position: [0, 0.14, 0], segments: 16, name: `${name}-stem` }));
+  if (actuator) {
+    const actuatorMaterial = standard(0xe857ff, { roughness: 0.28, metalness: 0.46, emissive: 0xe857ff, emissiveIntensity: 0.24 });
+    group.add(box([0.31, 0.24, 0.26], actuatorMaterial, { position: [0, 0.31, 0], name: `${name}-actuator` }));
+    group.add(box([0.2, 0.035, 0.12], materials.screen, { position: [0, 0.31, 0.135], name: `${name}-position-display` }));
+  } else {
+    const wheelMaterial = standard(0xe857ff, { roughness: 0.3, metalness: 0.58, emissive: 0xe857ff, emissiveIntensity: 0.16 });
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.025, 10, 28), wheelMaterial);
+    wheel.name = `${name}-handwheel`;
+    wheel.position.y = 0.28;
+    wheel.rotation.x = Math.PI / 2;
+    group.add(wheel);
+  }
   return group;
 }
 
@@ -183,12 +334,12 @@ function createSupplyFan(materials) {
   group.name = "supply-fan";
   const casing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.08, 14, 52), materials.darkMetal);
   casing.name = "supply-fan-casing";
-  casing.rotation.y = Math.PI / 2;
+  casing.position.z = 0.34;
   group.add(casing);
   const rotor = new THREE.Group();
   rotor.name = "supply-fan-rotor";
-  rotor.rotation.y = Math.PI / 2;
-  rotor.add(cylinder(0.11, 0.2, materials.chrome, { segments: 24, name: "supply-fan-hub" }));
+  rotor.position.z = 0.38;
+  rotor.add(cylinder(0.11, 0.2, materials.chrome, { rotation: [Math.PI / 2, 0, 0], segments: 24, name: "supply-fan-hub" }));
   for (let index = 0; index < 7; index += 1) rotor.add(box([0.38, 0.08, 0.06], materials.chrome, { position: [0.2, 0, 0], rotation: [0, 0, (index * Math.PI * 2) / 7 + 0.35], name: `supply-fan-blade-${index + 1}` }));
   group.add(rotor);
   group.add(box([0.32, 0.42, 0.5], materials.industrialBlue, { position: [0, -0.6, 0], name: "supply-fan-motor" }));

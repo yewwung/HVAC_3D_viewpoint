@@ -40,3 +40,15 @@ test("principle mode opens the chiller internals by default", () => {
   setPlantPresentation(model, { mode: "overview", selectedEquipmentId: null, pipesVisible: true });
   assert.equal(model.equipment.get("MAU-01").visible, true);
 });
+
+test("MAU mode isolates the cutaway and hides the plant environment", () => {
+  const model = createPlantModel();
+  setPlantPresentation(model, { mode: "mau", selectedEquipmentId: "MAU-01", pipesVisible: false });
+
+  assert.equal(model.equipment.get("MAU-01").visible, true);
+  assert.equal(model.equipment.get("MAU-01").userData.xrayEnabled, true);
+  assert.equal(model.equipment.get("CH-01").visible, false);
+  assert.equal(model.pipeNetwork.visible, false);
+  assert.equal(model.group.getObjectByName("plant-floor").visible, false);
+  assert.equal(model.group.getObjectByName("plant-grid").visible, false);
+});

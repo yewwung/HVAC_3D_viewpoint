@@ -40,10 +40,21 @@ test("MAU exposes each functional section in airflow order", () => {
     "outlet-section",
   ];
 
-  sections.forEach((name) => assert.ok(mau.getObjectByName(name), `${name} should exist`));
+  const cinematicLayers = [
+    "airflow-warm-zone",
+    "airflow-cool-zone",
+    "mau-hydronic-controls",
+    "mau-chws-control-valve",
+    "mau-chwr-balancing-valve",
+  ];
+
+  [...sections, ...cinematicLayers].forEach((name) => assert.ok(mau.getObjectByName(name), `${name} should exist`));
   assert.deepEqual(mau.userData.sectionOrder, sections);
-  assert.ok(mau.userData.animation.airflow.length >= 12);
+  assert.ok(mau.userData.animation.airflow.length >= 60);
+  assert.ok(mau.userData.animation.fluidPaths.length >= 4);
   assert.ok(mau.userData.animation.rotors.length >= 1);
+  assert.equal(mau.getObjectByName("supply-fan-casing").rotation.y, 0);
+  assert.equal(mau.getObjectByName("supply-fan-rotor").rotation.y, 0);
 });
 
 test("xray mode fades registered shells and restores their materials", () => {

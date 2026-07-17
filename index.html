@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="zh-CN" data-mode="overview" data-cycle-stage="-1">
+<html lang="zh-CN" data-mode="mau" data-cycle-stage="-1">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="author" content="yewwung" />
     <meta name="creator" content="yewwung" />
     <meta name="lastModifiedBy" content="yewwung" />
-    <meta name="description" content="可交互、可透视的中央空调水冷系统 3D 数字孪生展示" />
-    <title>HVAC 水冷机房数字孪生</title>
+    <meta name="description" content="可交互、可透视并显示内部冷热流动的 MAU 与中央空调系统 3D 数字孪生展示" />
+    <title>MAU 暖通设备 3D 数字孪生</title>
     <link rel="icon" href="data:," />
   </head>
   <body>
@@ -18,11 +18,11 @@
       <header class="topbar">
         <div class="product-identity">
           <span class="identity-mark" aria-hidden="true">DT</span>
-          <div><strong>中央空调水冷机房</strong><span>HVAC DIGITAL TWIN · PLANT 01</span></div>
+          <div><strong>HVAC 设备数字孪生</strong><span>MAU-01 CUTAWAY · PLANT 01</span></div>
         </div>
         <div class="plant-readings" aria-label="系统运行摘要">
-          <div><span>运行模式</span><strong id="current-mode">系统运行</strong></div>
-          <div><span>系统负载</span><strong>72%</strong></div>
+          <div><span>运行模式</span><strong id="current-mode">MAU 剖视</strong></div>
+          <div><span>当前负载</span><strong>63%</strong></div>
           <div class="health"><span>机房状态</span><strong><i></i>正常</strong></div>
         </div>
       </header>
@@ -35,6 +35,28 @@
           <li><span>03</span><div><strong>节流</strong><small>降压降温</small></div></li>
           <li><span>04</span><div><strong>蒸发</strong><small>吸收冷冻水热量</small></div></li>
         </ol>
+      </section>
+
+      <section class="mau-hud" aria-label="MAU 实时运行参数">
+        <div class="mau-hud-column mau-intake-hud">
+          <div class="mau-hud-heading"><span>OA / INTAKE</span><strong>新风入口</strong></div>
+          <dl>
+            <div class="is-hot"><dt>新风温度</dt><dd>30.4<small>°C</small></dd></div>
+            <div><dt>新风湿度</dt><dd>68<small>%RH</small></dd></div>
+            <div><dt>过滤器压差</dt><dd>86<small>Pa</small></dd></div>
+          </dl>
+        </div>
+        <div class="mau-unit-tag" aria-hidden="true"><span>MAU-01</span><strong>组合式新风处理机组</strong><i>ONLINE</i></div>
+        <div class="mau-hud-column mau-supply-hud">
+          <div class="mau-hud-heading"><span>SA / SUPPLY</span><strong>送风状态</strong></div>
+          <dl>
+            <div class="is-valve"><dt>冷冻水阀位</dt><dd>63<small>%</small></dd></div>
+            <div class="is-cold"><dt>送风温度</dt><dd>16.2<small>°C</small></dd></div>
+            <div><dt>送风湿度</dt><dd>54<small>%RH</small></dd></div>
+            <div><dt>送风量</dt><dd>18,200<small>m³/h</small></dd></div>
+          </dl>
+          <div class="fan-state"><span><i></i>送风机运行</span><strong>42.6<small>Hz</small></strong></div>
+        </div>
       </section>
 
       <div id="equipment-labels" class="equipment-labels" aria-label="设备数据标签"></div>
@@ -60,6 +82,7 @@
       </aside>
 
       <nav id="view-toolbar" class="view-toolbar" aria-label="3D 视图控制">
+        <button type="button" data-action="mau" aria-label="MAU 剖视" title="MAU 剖视"><i data-lucide="wind"></i><span>MAU</span></button>
         <button type="button" data-action="overview" aria-label="系统全景" title="系统全景"><i data-lucide="box"></i><span>全景</span></button>
         <button type="button" data-action="principle" aria-label="制冷循环" title="制冷循环"><i data-lucide="workflow"></i><span>原理</span></button>
         <button type="button" data-action="xray" aria-label="设备透视" title="设备透视"><i data-lucide="scan-line"></i><span>透视</span></button>

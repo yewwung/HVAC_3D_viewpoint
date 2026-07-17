@@ -15,7 +15,8 @@ export function createPlantModel() {
   group.name = "HVAC-PLANT";
   const equipment = new Map();
   const materials = createMaterialLibrary();
-  createPlantFloor(group, materials);
+  const environment = createPlantEnvironment(materials);
+  group.add(environment);
 
   addEquipment(group, equipment, buildScrewChiller({ id: "CH-01", position: [-1.2, 0, -0.2] }));
   addEquipment(group, equipment, buildPump({ id: "P-CHW-01", position: [-5.2, 0, 2.8], color: COLORS.chilledSupply }));
@@ -39,19 +40,24 @@ export function createPlantModel() {
   };
   for (const equipmentObject of equipment.values()) registerEquipmentAnimation(equipmentObject, animation);
 
-  const model = { group, equipment, pipeNetwork, flowSystems, animation };
-  setPlantPresentation(model, { mode: "overview", selectedEquipmentId: null, pipesVisible: true });
+  const model = { group, equipment, environment, pipeNetwork, flowSystems, animation };
+  setPlantPresentation(model, { mode: "mau", selectedEquipmentId: "MAU-01", pipesVisible: false });
   return model;
 }
 
 export function setPlantPresentation(model, state) {
+  const mauMode = state.mode === "mau";
   for (const [id, equipment] of model.equipment) {
     setEquipmentXray(equipment, false);
-    equipment.visible = state.mode !== "principle" || id === "CH-01";
+    equipment.visible = mauMode ? id === "MAU-01" : state.mode !== "principle" || id === "CH-01";
   }
-  const targetId = state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
+  const targetId = mauMode ? "MAU-01" : state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
   if (targetId && model.equipment.has(targetId)) setEquipmentXray(model.equipment.get(targetId), true);
-  model.pipeNetwork.visible = state.pipesVisible !== false;
+  model.environment.visible = !mauMode;
+  model.environment.traverse((object) => {
+    object.visible = !mauMode;
+  });
+  model.pipeNetwork.visible = !mauMode && state.pipesVisible !== false;
   model.group.userData.presentationMode = state.mode;
   model.group.userData.focusedEquipmentId = targetId;
 }
@@ -63,7 +69,7 @@ export function updatePlantModel(model, delta, elapsed, options = {}) {
     const speed = rotor.name.includes("tower") ? 1.3 : rotor.name.includes("screw") ? 2.4 : 2.05;
     const amount = delta * speed * motionScale;
     if (rotor.name.includes("pump-impeller")) rotor.rotation.z -= amount;
-    else if (rotor.name.includes("supply-fan")) rotor.rotation.x -= amount;
+    else if (rotor.name.includes("supply-fan")) rotor.rotation.z -= amount;
     else if (rotor.name.includes("fan-rotor")) rotor.rotation.y -= amount;
     else rotor.rotation.x += amount;
   }
@@ -73,7 +79,22 @@ export function updatePlantModel(model, delta, elapsed, options = {}) {
     const t = (item.phase + elapsed * speed) % 1;
     if (item.minX !== undefined) item.mesh.position.x = THREE.MathUtils.lerp(item.minX, item.maxX, t);
     else item.mesh.position.y = THREE.MathUtils.lerp(item.minY, item.maxY, t);
-    item.mesh.material.opacity = 0.32 + Math.sin((t + item.phase) * Math.PI) * 0.38;
+    if (item.materials && item.colorZones) {
+      const [coolingStart, reheatStart, supplyStart] = item.colorZones;
+      const x = item.mesh.position.x;
+      item.mesh.material = x < coolingStart
+        ? item.materials.warm
+        : x < reheatStart
+          ? item.materials.cool
+          : x < supplyStart
+            ? item.materials.warm
+            : item.materials.supply;
+      const pulse = 0.88 + Math.sin((t + item.phase) * Math.PI * 2) * 0.14;
+      item.mesh.scale.y = pulse;
+      item.mesh.scale.z = pulse;
+    } else {
+      item.mesh.material.opacity = 0.32 + Math.sin((t + item.phase) * Math.PI) * 0.38;
+    }
   }
   for (const item of model.animation.internalFlowParticles) {
     const t = (item.phase + elapsed * item.speed * motionScale) % 1;
@@ -87,7 +108,9 @@ function addEquipment(group, map, equipment) {
   map.set(equipment.userData.equipmentId, equipment);
 }
 
-function createPlantFloor(group, materials) {
+function createPlantEnvironment(materials) {
+  const group = new THREE.Group();
+  group.name = "plant-environment";
   const floor = box([19, 0.16, 15], standard(0x263238, { roughness: 0.72, metalness: 0.16 }), { position: [0, -0.11, 0], name: "plant-floor", castShadow: false });
   group.add(floor);
   const grid = new THREE.GridHelper(19, 38, 0x53676b, 0x36474a);
@@ -104,6 +127,7 @@ function createPlantFloor(group, materials) {
     [[3.4, -0.015, -5.6], [6.7, 0.055, 2.3]],
     [[4.6, -0.015, 0.4], [7.2, 0.055, 2.2]],
   ]) group.add(box(size, aisleMaterial, { position, name: `equipment-pad-${position.join("-")}`, castShadow: false }));
+  return group;
 }
 
 function registerEquipmentAnimation(equipment, animation) {
@@ -114,7 +138,7 @@ function registerEquipmentAnimation(equipment, animation) {
   for (const path of equipmentAnimation.fluidPaths ?? []) {
     const material = emissive(path.color);
     const geometry = new THREE.SphereGeometry(0.045, 10, 8);
-    const count = 5;
+    const count = path.particleCount ?? 5;
     for (let index = 0; index < count; index += 1) {
       const particle = new THREE.Mesh(geometry, material);
       particle.name = `${path.id}-internal-particle-${index + 1}`;

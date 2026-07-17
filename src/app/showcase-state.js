@@ -1,12 +1,12 @@
-export const SHOWCASE_MODES = Object.freeze(["overview", "principle", "xray"]);
+export const SHOWCASE_MODES = Object.freeze(["mau", "overview", "principle", "xray"]);
 
 const INITIAL_STATE = Object.freeze({
-  mode: "overview",
-  tourEnabled: true,
-  pipesVisible: true,
-  labelsVisible: true,
-  xrayEnabled: false,
-  selectedEquipmentId: null,
+  mode: "mau",
+  tourEnabled: false,
+  pipesVisible: false,
+  labelsVisible: false,
+  xrayEnabled: true,
+  selectedEquipmentId: "MAU-01",
 });
 
 export function createShowcaseState(initialState = {}) {
@@ -30,7 +30,16 @@ export function createShowcaseState(initialState = {}) {
     },
     setMode(mode) {
       if (!SHOWCASE_MODES.includes(mode)) return false;
-      update({ mode, xrayEnabled: mode === "xray" });
+      update(mode === "mau"
+        ? {
+            mode,
+            tourEnabled: false,
+            pipesVisible: false,
+            labelsVisible: false,
+            xrayEnabled: true,
+            selectedEquipmentId: "MAU-01",
+          }
+        : { mode, xrayEnabled: mode === "xray" });
       return true;
     },
     setXray(enabled) {

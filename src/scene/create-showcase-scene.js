@@ -9,8 +9,8 @@ const DEFAULT_TARGET = new THREE.Vector3(0.35, 1.0, -0.35);
 
 export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt }) {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x141c1f);
-  scene.fog = new THREE.Fog(0x141c1f, 27, 52);
+  scene.background = new THREE.Color(0x07111d);
+  scene.fog = new THREE.Fog(0x07111d, 25, 52);
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
   const mobile = window.matchMedia("(max-width: 720px)").matches;
@@ -19,7 +19,7 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.16;
 
   const camera = new THREE.PerspectiveCamera(mobile ? 54 : 45, 1, 0.1, 100);
   camera.position.copy(mobile ? new THREE.Vector3(15.5, 10.5, 19.5) : DEFAULT_CAMERA);
@@ -41,7 +41,7 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
   const labelElements = new Map();
   const componentLabelElements = [];
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let currentState = { mode: "overview", tourEnabled: true, pipesVisible: true, labelsVisible: true, selectedEquipmentId: null };
+  let currentState = { mode: "initial", tourEnabled: false, pipesVisible: false, labelsVisible: false, selectedEquipmentId: null };
   let selectionHelper = null;
   let cameraTween = null;
   let pointerDown = null;
@@ -83,6 +83,7 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
       selectionHelper.material.dispose();
       selectionHelper = null;
     }
+    if (currentState.mode === "mau") return;
     if (!equipmentId || !plant.equipment.has(equipmentId)) return;
     selectionHelper = new THREE.Box3Helper(new THREE.Box3().setFromObject(plant.equipment.get(equipmentId)), 0xf3a03d);
     selectionHelper.name = "equipment-selection";
@@ -97,11 +98,11 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
     const equipment = plant.equipment.get(equipmentId);
     if (!equipment) return false;
     const focus = equipment.userData.focusPoint?.clone() ?? new THREE.Vector3(0, 0.8, 0);
-    if (equipmentId === "MAU-01") focus.x += 0.72;
     equipment.localToWorld(focus);
-    const distance = equipment.userData.focusDistance ?? 6;
+    const baseDistance = equipment.userData.focusDistance ?? 6;
+    const distance = equipmentId === "MAU-01" && mobile ? baseDistance * 1.86 : baseDistance;
     const direction = equipmentId === "MAU-01"
-      ? new THREE.Vector3(0.16, 0.38, 1.0).normalize()
+      ? new THREE.Vector3(0.07, 0.24, 1.0).normalize()
       : new THREE.Vector3(1.15, 0.62, 1.25).normalize();
     beginCameraTween(focus.clone().add(direction.multiplyScalar(distance)), focus);
     selectEquipment(equipmentId);
@@ -109,6 +110,10 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
   }
 
   function resetView() {
+    if (currentState.mode === "mau") {
+      focusEquipment("MAU-01");
+      return;
+    }
     beginCameraTween(mobile ? new THREE.Vector3(15.5, 10.5, 19.5) : DEFAULT_CAMERA.clone(), DEFAULT_TARGET.clone());
     selectEquipment(null);
   }
@@ -128,7 +133,10 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
     const previousMode = currentState.mode;
     currentState = state;
     setPlantPresentation(plant, state);
+    controls.minDistance = state.mode === "mau" ? (mobile ? 9.5 : 5.0) : 3.2;
+    controls.maxDistance = state.mode === "mau" ? (mobile ? 19 : 15) : 32;
     selectEquipment(state.selectedEquipmentId);
+    if (state.mode === "mau" && previousMode !== "mau") focusEquipment("MAU-01");
     if (state.mode === "principle" && previousMode !== "principle") focusEquipment("CH-01");
     if (state.mode === "xray" && previousMode !== "xray") focusEquipment(state.selectedEquipmentId ?? "CH-01");
   }
@@ -252,8 +260,8 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
 }
 
 function addLighting(scene) {
-  scene.add(new THREE.HemisphereLight(0xeaf6f3, 0x192629, 1.45));
-  scene.add(new THREE.AmbientLight(0x77939a, 0.28));
+  scene.add(new THREE.HemisphereLight(0xeaf6f3, 0x07111d, 1.38));
+  scene.add(new THREE.AmbientLight(0x779eb1, 0.24));
   const key = new THREE.DirectionalLight(0xfff4dc, 2.8);
   key.position.set(8, 13, 10);
   key.castShadow = true;
@@ -272,4 +280,17 @@ function addLighting(scene) {
   equipmentSpot.position.set(1, 9, 7);
   equipmentSpot.target.position.set(-1.2, 0.7, -0.2);
   scene.add(equipmentSpot, equipmentSpot.target);
+
+  const mauRim = new THREE.SpotLight(0xd7f5ff, 42, 22, Math.PI * 0.2, 0.58, 1.25);
+  mauRim.position.set(4.8, 7.4, 5.8);
+  mauRim.target.position.set(4.6, 0.9, 0.4);
+  scene.add(mauRim, mauRim.target);
+
+  const intakeGlow = new THREE.PointLight(0xff4d52, 5.2, 5.5, 2);
+  intakeGlow.position.set(2.35, 1.1, 2.3);
+  scene.add(intakeGlow);
+
+  const coilGlow = new THREE.PointLight(0x18c8ff, 6.2, 5.3, 2);
+  coilGlow.position.set(3.15, 1.1, 2.1);
+  scene.add(coilGlow);
 }

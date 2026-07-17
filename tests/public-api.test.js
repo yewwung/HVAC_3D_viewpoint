@@ -28,5 +28,5 @@ test("public API reports invalid modes without changing state", () => {
   const api = createShowcaseApi(store, {});
 
   assert.equal(api.setMode("wireframe"), false);
-  assert.equal(api.getState().mode, "overview");
+  assert.equal(api.getState().mode, "mau");
 });

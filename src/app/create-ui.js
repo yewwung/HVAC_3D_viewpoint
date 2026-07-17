@@ -1,4 +1,4 @@
-import { Box, createIcons, Orbit, RotateCcw, Route, ScanLine, Tags, Workflow, X } from "lucide";
+import { Box, createIcons, Orbit, RotateCcw, Route, ScanLine, Tags, Wind, Workflow, X } from "lucide";
 
 import { EQUIPMENT, getEquipmentById } from "../data/plant-data.js";
 
@@ -35,7 +35,7 @@ export function createUi({ store, sceneController }) {
   const componentLabels = createComponentLabels(componentLayer, sceneController);
 
   createIcons({
-    icons: { Box, Orbit, RotateCcw, Route, ScanLine, Tags, Workflow, X },
+    icons: { Box, Orbit, RotateCcw, Route, ScanLine, Tags, Wind, Workflow, X },
     attrs: { "stroke-width": 1.8, "aria-hidden": "true" },
   });
 
@@ -43,10 +43,14 @@ export function createUi({ store, sceneController }) {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
     const action = button.dataset.action;
-    if (action === "overview") {
+    if (action === "mau") {
+      store.setMode("mau");
+      sceneController.focusEquipment("MAU-01");
+    } else if (action === "overview") {
       store.selectEquipment(null);
       store.setMode("overview");
       if (!store.getState().pipesVisible) store.togglePipes();
+      if (!store.getState().labelsVisible) store.toggleLabels();
       sceneController.resetView();
     } else if (action === "principle") {
       store.selectEquipment("CH-01");
@@ -89,7 +93,7 @@ export function createUi({ store, sceneController }) {
         label.classList.toggle("is-selected", state.selectedEquipmentId === id);
         label.setAttribute("aria-pressed", String(state.selectedEquipmentId === id));
       }
-      const componentTarget = state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
+      const componentTarget = state.mode === "mau" ? "MAU-01" : state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
       for (const item of componentLabels) item.element.hidden = item.equipmentId !== componentTarget;
       renderEquipmentPanel({ equipmentPanel, panelTitle, panelId, panelStatus, panelMetrics, panelInternals, panelXray }, state);
     },
@@ -141,21 +145,16 @@ function createEquipmentLabels(container, store, sceneController) {
 
 function updateControl(button, state) {
   const action = button.dataset.action;
-  const active =
-    (action === state.mode) ||
-    (action === "xray" && state.xrayEnabled) ||
-    (action === "tour" && state.tourEnabled) ||
-    (action === "pipes" && state.pipesVisible) ||
-    (action === "labels" && state.labelsVisible);
+  const active = isControlActive(action, state);
   button.classList.toggle("is-active", active);
-  if (["overview", "principle", "xray", "tour", "pipes", "labels"].includes(action)) {
+  if (["mau", "overview", "principle", "xray", "tour", "pipes", "labels"].includes(action)) {
     button.setAttribute("aria-pressed", String(active));
   }
 }
 
 function renderEquipmentPanel(elements, state) {
   const equipment = getEquipmentById(state.selectedEquipmentId);
-  elements.equipmentPanel.hidden = !equipment;
+  elements.equipmentPanel.hidden = !equipment || state.mode === "mau";
   if (!equipment) return;
   elements.panelTitle.textContent = equipment.name;
   elements.panelId.textContent = equipment.id;
@@ -184,5 +183,14 @@ function createInternal(name) {
 }
 
 function modeLabel(mode) {
-  return { overview: "系统运行", principle: "制冷循环", xray: "设备透视" }[mode] ?? "系统运行";
+  return { mau: "MAU 剖视", overview: "系统运行", principle: "制冷循环", xray: "设备透视" }[mode] ?? "系统运行";
+}
+
+export function isControlActive(action, state) {
+  return (
+    action === state.mode ||
+    (action === "tour" && state.tourEnabled) ||
+    (action === "pipes" && state.pipesVisible) ||
+    (action === "labels" && state.labelsVisible)
+  );
 }

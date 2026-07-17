@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
-  --bg: #141c1f;
+  --bg: #07111d;
   --surface: rgba(232, 238, 236, 0.96);
   --surface-muted: #d8dfdc;
   --ink: #182326;
@@ -16,6 +16,11 @@
   --warm: #ff8b3d;
   --ok: #35c990;
   --shadow: rgba(3, 10, 12, 0.36);
+  --steel: #d7e0df;
+  --cold: #18c8ff;
+  --hot: #ff4d52;
+  --running: #45df8a;
+  --valve: #e857ff;
 }
 
 * {
@@ -78,7 +83,7 @@ button:focus-visible {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  box-shadow: inset 0 0 130px rgba(0, 0, 0, 0.42);
+  box-shadow: inset 0 0 120px rgba(0, 0, 0, 0.46), inset 0 -120px 130px rgba(0, 0, 0, 0.18);
 }
 
 .topbar {
@@ -93,8 +98,8 @@ button:focus-visible {
   justify-content: space-between;
   gap: 30px;
   padding: 10px 22px;
-  border-bottom: 1px solid rgba(198, 219, 214, 0.18);
-  background: rgba(16, 24, 27, 0.82);
+  border-bottom: 1px solid rgba(104, 207, 238, 0.22);
+  background: rgba(7, 17, 29, 0.8);
   backdrop-filter: blur(14px);
 }
 
@@ -112,7 +117,8 @@ button:focus-visible {
   flex: 0 0 40px;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
-  background: var(--orange);
+  background: var(--cold);
+  box-shadow: 0 0 22px rgba(24, 200, 255, 0.24);
   color: #fff;
   font-family: Bahnschrift, "Segoe UI", sans-serif;
   font-size: 14px;
@@ -170,7 +176,7 @@ button:focus-visible {
 }
 
 .health strong {
-  color: #69dcb1;
+  color: var(--running);
 }
 
 .health i {
@@ -179,8 +185,160 @@ button:focus-visible {
   height: 7px;
   margin-right: 6px;
   border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 10px rgba(53, 201, 144, 0.82);
+  background: var(--running);
+  box-shadow: 0 0 10px rgba(69, 223, 138, 0.82);
+}
+
+.mau-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 17;
+  pointer-events: none;
+}
+
+html:not([data-mode="mau"]) .mau-hud {
+  display: none;
+}
+
+.mau-hud-column {
+  position: absolute;
+  top: 112px;
+  width: 218px;
+  color: #e8f5f7;
+  font-family: Bahnschrift, "Microsoft YaHei", sans-serif;
+}
+
+.mau-intake-hud {
+  left: 22px;
+  padding-left: 14px;
+  border-left: 2px solid var(--hot);
+}
+
+.mau-supply-hud {
+  right: 22px;
+  padding-right: 14px;
+  border-right: 2px solid var(--cold);
+}
+
+.mau-hud-heading {
+  display: grid;
+  gap: 3px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid rgba(215, 224, 223, 0.24);
+}
+
+.mau-supply-hud .mau-hud-heading {
+  text-align: right;
+}
+
+.mau-hud-heading span,
+.mau-unit-tag span {
+  color: #7e9aa6;
+  font-family: Consolas, monospace;
+  font-size: 9px;
+}
+
+.mau-hud-heading strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mau-hud dl {
+  margin: 0;
+}
+
+.mau-hud dl > div {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(215, 224, 223, 0.14);
+}
+
+.mau-supply-hud dl > div {
+  flex-direction: row-reverse;
+}
+
+.mau-hud dt {
+  color: #91a7b0;
+  font-size: 10px;
+}
+
+.mau-hud dd {
+  margin: 0;
+  color: #ecf8fa;
+  font-family: Bahnschrift, Consolas, sans-serif;
+  font-size: 22px;
+  font-weight: 650;
+}
+
+.mau-hud dd small,
+.fan-state small {
+  margin-left: 4px;
+  color: #7f9aa5;
+  font-size: 8px;
+  font-weight: 500;
+}
+
+.mau-hud .is-hot dd { color: #ff777a; }
+.mau-hud .is-cold dd { color: #5cddff; }
+.mau-hud .is-valve dd { color: #f28cff; }
+
+.mau-unit-tag {
+  position: absolute;
+  top: 94px;
+  left: 50%;
+  display: grid;
+  min-width: 260px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(24, 200, 255, 0.42);
+  border-bottom: 1px solid rgba(24, 200, 255, 0.16);
+  color: #dcebed;
+  transform: translateX(-50%);
+}
+
+.mau-unit-tag strong {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mau-unit-tag i {
+  color: var(--running);
+  font-family: Consolas, monospace;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.fan-state {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  color: #a4babf;
+  font-size: 10px;
+}
+
+.fan-state span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.fan-state i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--running);
+  box-shadow: 0 0 12px rgba(69, 223, 138, 0.82);
+}
+
+.fan-state strong {
+  color: var(--running);
+  font-size: 15px;
 }
 
 .cycle-panel {
@@ -314,6 +472,14 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
   white-space: nowrap;
 }
 
+html[data-mode="mau"] .component-label {
+  border-color: rgba(24, 200, 255, 0.5);
+  border-left-color: var(--cold);
+  background: rgba(7, 17, 29, 0.86);
+  color: #e5f8fc;
+  box-shadow: 0 0 18px rgba(24, 200, 255, 0.16);
+}
+
 .equipment-label {
   position: absolute;
   top: 0;
@@ -376,6 +542,12 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
   color: var(--ink);
   box-shadow: 0 20px 46px var(--shadow);
   animation: panel-in 220ms ease both;
+}
+
+html[data-mode="mau"] .equipment-panel,
+html[data-mode="mau"] .pipe-legend,
+html[data-mode="mau"] .equipment-labels {
+  display: none !important;
 }
 
 @keyframes panel-in {
@@ -668,6 +840,19 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
   color: #fff;
 }
 
+.view-toolbar button[data-action="mau"].is-active {
+  background: var(--cold);
+  color: #06121b;
+  box-shadow: 0 0 18px rgba(24, 200, 255, 0.28);
+}
+
+html[data-mode="mau"] .view-toolbar button[data-action="tour"],
+html[data-mode="mau"] .view-toolbar button[data-action="pipes"],
+html[data-mode="mau"] .view-toolbar button[data-action="labels"],
+html[data-mode="mau"] .view-toolbar .toolbar-divider {
+  display: none;
+}
+
 .toolbar-divider {
   width: 1px;
   height: 34px;
@@ -684,7 +869,7 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
   place-content: center;
   justify-items: center;
   gap: 10px;
-  background: #141c1f;
+  background: #07111d;
   color: #eaf2ef;
   transition: opacity 260ms ease, visibility 260ms ease;
 }
@@ -741,6 +926,10 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
 
   .equipment-label {
     width: 102px;
+  }
+
+  .mau-hud-column {
+    width: 184px;
   }
 
   .view-toolbar {
@@ -831,6 +1020,70 @@ html[data-cycle-stage="3"] .cycle-panel li:nth-child(4) > span {
 
   .cycle-panel li strong {
     font-size: 9px;
+  }
+
+  .mau-unit-tag,
+  .mau-hud-heading,
+  .fan-state {
+    display: none;
+  }
+
+  .mau-hud-column {
+    right: 8px;
+    left: 8px;
+    width: auto;
+    padding: 0;
+    border: 0;
+  }
+
+  .mau-intake-hud {
+    top: 66px;
+  }
+
+  .mau-supply-hud {
+    top: auto;
+    bottom: 80px;
+  }
+
+  .mau-hud dl {
+    display: flex;
+    border: 1px solid rgba(126, 190, 207, 0.22);
+    background: rgba(7, 17, 29, 0.78);
+    backdrop-filter: blur(10px);
+  }
+
+  .mau-hud dl > div,
+  .mau-supply-hud dl > div {
+    min-width: 0;
+    min-height: 47px;
+    flex: 1 1 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 3px;
+    border-right: 1px solid rgba(215, 224, 223, 0.12);
+    border-bottom: 0;
+    text-align: center;
+  }
+
+  .mau-hud dl > div:last-child {
+    border-right: 0;
+  }
+
+  .mau-hud dt {
+    overflow: hidden;
+    width: 100%;
+    font-size: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mau-hud dd {
+    font-size: 14px;
+  }
+
+  .mau-hud dd small {
+    font-size: 7px;
   }
 
   .equipment-labels .equipment-label {
