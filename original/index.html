@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>暖通空调水冷系统机房 3D</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="scene-shell" aria-label="暖通空调水冷系统机房三维渲染">
+      <canvas id="scene-canvas"></canvas>
+
+      <section class="system-panel" aria-label="系统信息">
+        <p class="eyebrow">HVAC Water-cooled Plant</p>
+        <h1>中央空调水冷系统 3D 机房</h1>
+        <div class="metrics">
+          <span>冷冻泵 -> 主机蒸发器 -> 分水器</span>
+          <span>冷却泵 -> 主机冷凝器 -> 冷却塔</span>
+          <span>分水器 / 集水器 / AHU 末端</span>
+        </div>
+      </section>
+
+      <aside class="legend" aria-label="管线图例">
+        <div><span class="swatch swatch-chws"></span>冷冻供水 CHWS</div>
+        <div><span class="swatch swatch-chwr"></span>冷冻回水 CHWR</div>
+        <div><span class="swatch swatch-cws"></span>冷却供水 CWS</div>
+        <div><span class="swatch swatch-cwr"></span>冷却回水 CWR</div>
+      </aside>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
