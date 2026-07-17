@@ -19,6 +19,14 @@ test("screw chiller exposes the major reference-image components", () => {
     "refrigerant-loop",
     "screw-rotor-a",
     "screw-rotor-b",
+    "evaporator-cutaway-shell",
+    "evaporator-fluid-volume",
+    "evaporator-tube-sheet",
+    "condenser-cutaway-shell",
+    "condenser-fluid-volume",
+    "condenser-tube-sheet",
+    "compressor-cutaway-casing",
+    "compressor-rotor-chamber",
   ]) {
     assert.ok(chiller.getObjectByName(name), `${name} should exist`);
   }
@@ -33,6 +41,10 @@ test("screw chiller separates xray shells from internal working parts", () => {
   assert.equal(chiller.userData.internals.every((object) => object instanceof THREE.Object3D), true);
   assert.equal(chiller.userData.internals.includes(chiller.getObjectByName("evaporator-tube-bundle")), true);
   assert.equal(chiller.userData.internals.includes(chiller.getObjectByName("screw-rotor-a")), true);
+  const xrayLayers = chiller.getObjectByName("chiller-xray-layers");
+  assert.ok(xrayLayers, "chiller-xray-layers should exist");
+  assert.equal(xrayLayers.userData.xrayOnly, true);
+  assert.equal(xrayLayers.visible, false);
 });
 
 test("screw chiller registers animated rotors and fluid paths", () => {

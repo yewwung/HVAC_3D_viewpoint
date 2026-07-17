@@ -31,39 +31,52 @@ export function buildFlowSystem(routes = PIPE_ROUTES) {
   const network = new THREE.Group();
   network.name = "plant-pipe-network";
   const flowSystems = [];
-  const sharedParticleGeometry = new THREE.SphereGeometry(0.055, 10, 8);
+  const sharedParticleGeometry = new THREE.CapsuleGeometry(0.022, 0.095, 4, 8);
 
   for (const circuit of WATER_CIRCUITS) {
     const circuitGroup = new THREE.Group();
     circuitGroup.name = `circuit-${circuit.id}`;
     const systems = [];
-    const pipeMaterial = physical(circuit.color, { roughness: 0.2, metalness: 0.58, transparent: true, opacity: 0.9 });
-    const coreMaterial = new THREE.MeshBasicMaterial({ color: circuit.color, transparent: true, opacity: 0.56, toneMapped: false });
-    const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.96, toneMapped: false });
+    const pipeMaterial = physical(circuit.color, { roughness: 0.16, metalness: 0.44, transparent: true, opacity: 0.48, transmission: 0.08 });
+    pipeMaterial.depthWrite = false;
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: circuit.color, transparent: true, opacity: 0.42, toneMapped: false, depthWrite: false });
+    const particleColor = new THREE.Color(circuit.color).lerp(new THREE.Color(0xffffff), 0.42);
+    const particleMaterial = new THREE.MeshBasicMaterial({ color: particleColor, transparent: true, opacity: 0.92, toneMapped: false, depthWrite: false });
     const particles = [];
 
     for (const [routeIndex, route] of (routes[circuit.id] ?? []).entries()) {
       const curve = createOrthogonalCurve(route);
       const pipe = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(32, route.length * 18), routeIndex === 0 ? 0.105 : 0.082, 14, false), pipeMaterial);
       pipe.name = `${circuit.id}-pipe-${routeIndex + 1}`;
+      pipe.userData.flowLayer = "shell";
       pipe.castShadow = true;
       pipe.receiveShadow = true;
       circuitGroup.add(pipe);
-      const core = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(32, route.length * 18), routeIndex === 0 ? 0.04 : 0.03, 8, false), coreMaterial);
+      const core = new THREE.Mesh(new THREE.TubeGeometry(curve, Math.max(32, route.length * 18), routeIndex === 0 ? 0.068 : 0.052, 10, false), coreMaterial);
       core.name = `${circuit.id}-core-${routeIndex + 1}`;
+      core.userData.flowLayer = "fluid";
+      core.renderOrder = 3;
       circuitGroup.add(core);
 
       route.slice(1, -1).forEach((point, elbowIndex) => {
         const elbow = new THREE.Mesh(new THREE.SphereGeometry(routeIndex === 0 ? 0.11 : 0.087, 14, 10), pipeMaterial);
         elbow.position.fromArray(point);
         elbow.name = `${circuit.id}-elbow-${routeIndex + 1}-${elbowIndex + 1}`;
+        elbow.userData.flowLayer = "shell";
         circuitGroup.add(elbow);
+        const fluidElbow = new THREE.Mesh(new THREE.SphereGeometry(routeIndex === 0 ? 0.071 : 0.055, 14, 10), coreMaterial);
+        fluidElbow.position.fromArray(point);
+        fluidElbow.name = `${circuit.id}-fluid-elbow-${routeIndex + 1}-${elbowIndex + 1}`;
+        fluidElbow.userData.flowLayer = "fluid";
+        fluidElbow.renderOrder = 3;
+        circuitGroup.add(fluidElbow);
       });
 
       const count = Math.max(5, Math.round(curve.getLength() * 0.65));
       for (let index = 0; index < count; index += 1) {
         const particle = new THREE.Mesh(sharedParticleGeometry, particleMaterial);
         particle.name = `${circuit.id}-flow-particle-${routeIndex + 1}-${index + 1}`;
+        particle.renderOrder = 6;
         circuitGroup.add(particle);
         particles.push({ mesh: particle, curve, phase: index / count, speed: 0.035 + circuit.flowM3h / 14000 });
       }
@@ -72,7 +85,26 @@ export function buildFlowSystem(routes = PIPE_ROUTES) {
     network.add(circuitGroup);
     flowSystems.push({ ...circuit, group: circuitGroup, routes: systems, particles });
   }
+  setFlowSystemXray(network, false);
   return { network, flowSystems };
+}
+
+export function setFlowSystemXray(network, enabled) {
+  network.traverse((object) => {
+    const layer = object.userData.flowLayer;
+    if (!object.isMesh || !layer) return;
+    const material = object.material;
+    if (material.userData.flowBaseOpacity === undefined) {
+      material.userData.flowBaseOpacity = material.opacity;
+      material.userData.flowBaseDepthWrite = material.depthWrite;
+    }
+    material.transparent = true;
+    material.opacity = enabled ? (layer === "shell" ? 0.14 : 0.65) : material.userData.flowBaseOpacity;
+    material.depthWrite = enabled ? false : material.userData.flowBaseDepthWrite;
+    material.needsUpdate = true;
+    object.renderOrder = layer === "fluid" ? 3 : 1;
+  });
+  network.userData.xrayEnabled = Boolean(enabled);
 }
 
 export function updateFlowSystems(flowSystems, elapsed, motionScale = 1) {
@@ -82,6 +114,8 @@ export function updateFlowSystems(flowSystems, elapsed, motionScale = 1) {
       const point = Number.isFinite(t) ? particle.curve.getPointAt(t) : null;
       if (!point) continue;
       particle.mesh.position.copy(point);
+      const tangent = particle.curve.getTangentAt(t, new THREE.Vector3()).normalize();
+      particle.mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
       const pulse = 0.9 + Math.sin((elapsed * 7 + particle.phase * 12) * Math.PI) * 0.18;
       particle.mesh.scale.setScalar(pulse);
     }

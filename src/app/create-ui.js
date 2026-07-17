@@ -4,16 +4,32 @@ import { EQUIPMENT, getEquipmentById } from "../data/plant-data.js";
 
 const LABEL_IDS = ["CH-01", "P-CHW-01", "P-CW-01", "CT-01", "CT-02", "MAU-01"];
 const COMPONENT_LABELS = [
-  ["CH-01", "evaporator-shell", "蒸发器"],
-  ["CH-01", "condenser-shell", "冷凝器"],
-  ["CH-01", "compressor", "螺杆压缩机"],
+  ["CH-01", "evaporator-tube-bundle", "蒸发器管束"],
+  ["CH-01", "evaporator-tube-sheet", "蒸发器管板"],
+  ["CH-01", "condenser-tube-bundle", "冷凝器管束"],
+  ["CH-01", "condenser-tube-sheet", "冷凝器管板"],
+  ["CH-01", "screw-rotor-a", "双螺杆转子"],
   ["CH-01", "expansion-valve", "电子膨胀阀"],
+  ...["P-CHW-01", "P-CHW-02", "P-CW-01", "P-CW-02"].flatMap((id) => [
+    [id, "pump-impeller", "离心叶轮"],
+    [id, "pump-mechanical-seal", "机械密封"],
+    [id, "pump-motor-stator", "电机定子"],
+    [id, "pump-internal-flow", "泵内水流"],
+  ]),
+  ...["CT-01", "CT-02"].flatMap((id) => [
+    [id, "spray-system", "热水布水"],
+    [id, "fill-media", "PVC 填料"],
+    [id, "drift-eliminator", "收水器"],
+    [id, "basin-water", "冷水集水盘"],
+    [id, "fan-rotor", "轴流风机"],
+  ]),
   ["MAU-01", "intake-louver", "新风入口"],
-  ["MAU-01", "pre-filter", "初效过滤"],
-  ["MAU-01", "cooling-coil", "冷却盘管"],
-  ["MAU-01", "heating-section", "加热段"],
-  ["MAU-01", "humidifier", "加湿段"],
+  ["MAU-01", "pre-filter", "G4 / F8 两级过滤"],
+  ["MAU-01", "cooling-coil", "表冷除湿盘管"],
+  ["MAU-01", "heating-section", "再热盘管"],
+  ["MAU-01", "humidifier", "蒸汽加湿"],
   ["MAU-01", "supply-fan", "送风机"],
+  ["MAU-01", "supply-silencer", "消声段"],
   ["MAU-01", "outlet-section", "出风段"],
 ];
 
@@ -61,7 +77,6 @@ export function createUi({ store, sceneController }) {
       const targetId = store.getState().selectedEquipmentId ?? "CH-01";
       store.selectEquipment(targetId);
       store.setXray(true);
-      if (store.getState().pipesVisible) store.togglePipes();
       sceneController.focusEquipment(targetId);
     } else if (action === "tour") {
       store.toggleTour();
@@ -79,7 +94,6 @@ export function createUi({ store, sceneController }) {
     const targetId = store.getState().selectedEquipmentId;
     if (!targetId) return;
     store.setXray(true);
-    if (store.getState().pipesVisible) store.togglePipes();
     sceneController.focusEquipment(targetId);
   });
 
@@ -154,7 +168,7 @@ function updateControl(button, state) {
 
 function renderEquipmentPanel(elements, state) {
   const equipment = getEquipmentById(state.selectedEquipmentId);
-  elements.equipmentPanel.hidden = !equipment || state.mode === "mau";
+  elements.equipmentPanel.hidden = !equipment || state.mode === "mau" || state.mode === "xray";
   if (!equipment) return;
   elements.panelTitle.textContent = equipment.name;
   elements.panelId.textContent = equipment.id;

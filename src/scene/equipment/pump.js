@@ -16,6 +16,12 @@ export function buildPump(options = {}) {
   const internals = [];
   const rotors = [];
   const fluidPaths = [];
+  const xrayLayers = new THREE.Group();
+  xrayLayers.name = "pump-xray-layers";
+  xrayLayers.userData.xrayOnly = true;
+  xrayLayers.visible = false;
+  group.add(xrayLayers);
+  internals.push(xrayLayers);
 
   group.add(box([2.25, 0.14, 1.0], materials.darkMetal, { position: [0.15, 0.08, 0], name: "pump-skid" }));
   group.add(box([2.0, 0.11, 0.82], materials.rubber, { position: [0.15, -0.01, 0], name: "pump-isolation-base" }));
@@ -82,6 +88,59 @@ export function buildPump(options = {}) {
   group.add(internalFlow);
   internals.push(internalFlow);
   fluidPaths.push({ id: `${id}-internal-flow`, curve: internalFlow.userData.curve, color, speed: 0.22 });
+  fluidPaths[0].particleCount = 14;
+
+  const voluteWaterMaterial = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.18, depthWrite: false, toneMapped: false });
+  const voluteWater = cylinder(0.38, 0.27, voluteWaterMaterial, {
+    position: [-0.62, 0.62, 0],
+    rotation: [Math.PI / 2, 0, 0],
+    segments: 48,
+    name: "pump-volute-water-volume",
+    castShadow: false,
+    receiveShadow: false,
+  });
+  voluteWater.renderOrder = 3;
+  xrayLayers.add(voluteWater);
+
+  const cutawayRimMaterial = standard(0xd7e0df, { roughness: 0.2, metalness: 0.85, emissive: color, emissiveIntensity: 0.16 });
+  const cutawayRim = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.026, 10, 48), cutawayRimMaterial);
+  cutawayRim.name = "pump-cutaway-rim";
+  cutawayRim.position.set(-0.62, 0.62, 0.225);
+  xrayLayers.add(cutawayRim);
+
+  const statorMaterial = standard(0x82979b, { roughness: 0.24, metalness: 0.82, transparent: true, opacity: 0.62, side: THREE.DoubleSide });
+  statorMaterial.depthWrite = false;
+  const stator = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.31, 0.31, 0.96, 48, 1, true, Math.PI * 0.2, Math.PI * 1.28),
+    statorMaterial,
+  );
+  stator.name = "pump-motor-stator";
+  stator.position.set(0.59, 0.64, 0);
+  stator.rotation.z = Math.PI / 2;
+  xrayLayers.add(stator);
+
+  const shaft = cylinder(0.052, 1.76, materials.chrome, {
+    position: [-0.02, 0.62, 0.02],
+    rotation: [0, 0, Math.PI / 2],
+    segments: 20,
+    name: "pump-shaft",
+  });
+  xrayLayers.add(shaft);
+
+  const seal = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.035, 12, 32), materials.brass);
+  seal.name = "pump-mechanical-seal";
+  seal.position.set(-0.27, 0.62, 0.02);
+  seal.rotation.y = Math.PI / 2;
+  xrayLayers.add(seal);
+
+  const bearingMaterial = standard(0xe857ff, { roughness: 0.22, metalness: 0.78, emissive: 0xe857ff, emissiveIntensity: 0.16 });
+  for (const x of [0.08, 0.84]) {
+    const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.026, 10, 28), bearingMaterial);
+    bearing.name = `pump-bearing-${x}`;
+    bearing.position.set(x, 0.62, 0.02);
+    bearing.rotation.y = Math.PI / 2;
+    xrayLayers.add(bearing);
+  }
 
   group.userData.shells = shells;
   group.userData.internals = internals;

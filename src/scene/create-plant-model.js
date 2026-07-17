@@ -8,7 +8,7 @@ import { buildMau } from "./equipment/mau.js";
 import { buildPump } from "./equipment/pump.js";
 import { buildWaterHeader } from "./equipment/water-header.js";
 import { setEquipmentXray } from "./equipment/xray.js";
-import { buildFlowSystem, updateFlowSystems } from "./flow-system.js";
+import { buildFlowSystem, setFlowSystemXray, updateFlowSystems } from "./flow-system.js";
 
 export function createPlantModel() {
   const group = new THREE.Group();
@@ -47,17 +47,20 @@ export function createPlantModel() {
 
 export function setPlantPresentation(model, state) {
   const mauMode = state.mode === "mau";
+  const xrayMode = state.mode === "xray";
+  const targetId = mauMode ? "MAU-01" : state.mode === "principle" ? "CH-01" : xrayMode ? state.selectedEquipmentId ?? "CH-01" : null;
   for (const [id, equipment] of model.equipment) {
     setEquipmentXray(equipment, false);
-    equipment.visible = mauMode ? id === "MAU-01" : state.mode !== "principle" || id === "CH-01";
+    equipment.visible = targetId ? id === targetId : true;
   }
-  const targetId = mauMode ? "MAU-01" : state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
   if (targetId && model.equipment.has(targetId)) setEquipmentXray(model.equipment.get(targetId), true);
-  model.environment.visible = !mauMode;
+  const environmentVisible = !mauMode && !xrayMode;
+  model.environment.visible = environmentVisible;
   model.environment.traverse((object) => {
-    object.visible = !mauMode;
+    object.visible = environmentVisible;
   });
   model.pipeNetwork.visible = !mauMode && state.pipesVisible !== false;
+  setFlowSystemXray(model.pipeNetwork, state.mode === "xray");
   model.group.userData.presentationMode = state.mode;
   model.group.userData.focusedEquipmentId = targetId;
 }

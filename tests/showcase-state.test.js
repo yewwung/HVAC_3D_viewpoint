@@ -79,3 +79,12 @@ test("subscriber receives an immutable snapshot and can unsubscribe", () => {
   assert.equal(snapshots[0].selectedEquipmentId, "P-CHW-01");
   assert.equal(Object.isFrozen(snapshots[0]), true);
 });
+
+test("equipment xray keeps transparent pipe flow visible", () => {
+  const store = createShowcaseState();
+
+  store.setXray(true);
+
+  assert.equal(store.getState().mode, "xray");
+  assert.equal(store.getState().pipesVisible, true);
+});

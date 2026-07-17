@@ -83,7 +83,7 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
       selectionHelper.material.dispose();
       selectionHelper = null;
     }
-    if (currentState.mode === "mau") return;
+    if (["mau", "xray", "principle"].includes(currentState.mode)) return;
     if (!equipmentId || !plant.equipment.has(equipmentId)) return;
     selectionHelper = new THREE.Box3Helper(new THREE.Box3().setFromObject(plant.equipment.get(equipmentId)), 0xf3a03d);
     selectionHelper.name = "equipment-selection";

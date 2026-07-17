@@ -22,9 +22,15 @@ test("plant presentation applies xray only to the focused equipment", () => {
   setPlantPresentation(model, { mode: "xray", selectedEquipmentId: "MAU-01", pipesVisible: true });
   assert.equal(mau.userData.xrayEnabled, true);
   assert.equal(chiller.userData.xrayEnabled, false);
+  assert.equal(mau.visible, true);
+  assert.equal(chiller.visible, false);
+  assert.equal(model.environment.visible, false);
+  assert.equal(model.pipeNetwork.userData.xrayEnabled, true);
+  assert.equal(model.pipeNetwork.visible, true);
 
   setPlantPresentation(model, { mode: "overview", selectedEquipmentId: null, pipesVisible: false });
   assert.equal(mau.userData.xrayEnabled, false);
+  assert.equal(model.pipeNetwork.userData.xrayEnabled, false);
   assert.equal(model.pipeNetwork.visible, false);
 });
 

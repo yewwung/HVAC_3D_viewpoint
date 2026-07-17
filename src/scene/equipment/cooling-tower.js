@@ -14,10 +14,26 @@ export function buildCoolingTower(options = {}) {
   const rotors = [];
   const droplets = [];
   const airflow = [];
+  const xrayLayers = new THREE.Group();
+  xrayLayers.name = "tower-xray-layers";
+  xrayLayers.userData.xrayOnly = true;
+  xrayLayers.visible = false;
+  group.add(xrayLayers);
+  internals.push(xrayLayers);
 
   const basin = box([2.65, 0.32, 1.65], materials.darkMetal, { position: [0, 0.28, 0], name: "collection-basin" });
   group.add(basin);
-  internals.push(basin);
+  shells.push(basin);
+
+  const basinWaterMaterial = new THREE.MeshBasicMaterial({ color: COLORS.coolingSupply, transparent: true, opacity: 0.3, depthWrite: false, toneMapped: false });
+  const basinWater = box([2.36, 0.12, 1.38], basinWaterMaterial, {
+    position: [0, 0.43, 0],
+    name: "basin-water",
+    castShadow: false,
+    receiveShadow: false,
+  });
+  basinWater.renderOrder = 4;
+  xrayLayers.add(basinWater);
 
   const shellGroup = new THREE.Group();
   shellGroup.name = "tower-shell";
@@ -56,6 +72,42 @@ export function buildCoolingTower(options = {}) {
   group.add(spraySystem);
   internals.push(spraySystem);
 
+  const sprayCones = new THREE.Group();
+  sprayCones.name = "spray-cones";
+  const sprayConeMaterial = new THREE.MeshBasicMaterial({ color: 0x4bdcff, transparent: true, opacity: 0.2, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+  for (const x of [-0.82, -0.4, 0, 0.4, 0.82]) {
+    for (const z of [-0.42, 0, 0.42]) {
+      const cone = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.38, 16, 1, true), sprayConeMaterial);
+      cone.name = `spray-cone-${x}-${z}`;
+      cone.position.set(x, 1.58, z);
+      cone.rotation.z = Math.PI;
+      sprayCones.add(cone);
+    }
+  }
+  xrayLayers.add(sprayCones);
+
+  const eliminator = new THREE.Group();
+  eliminator.name = "drift-eliminator";
+  const eliminatorMaterial = standard(0xb8ccca, { roughness: 0.34, metalness: 0.35, transparent: true, opacity: 0.72 });
+  for (let z = -0.52; z <= 0.52; z += 0.15) {
+    eliminator.add(box([2.05, 0.045, 0.08], eliminatorMaterial, {
+      position: [0, 1.76, z],
+      rotation: [0.18, 0, 0],
+      name: `eliminator-blade-${z}`,
+    }));
+  }
+  xrayLayers.add(eliminator);
+
+  const plenumMaterial = new THREE.MeshBasicMaterial({ color: 0x71f1df, transparent: true, opacity: 0.07, depthWrite: false, toneMapped: false, side: THREE.BackSide });
+  const airPlenum = box([2.08, 1.22, 1.18], plenumMaterial, {
+    position: [0, 1.2, 0],
+    name: "tower-air-plenum",
+    castShadow: false,
+    receiveShadow: false,
+  });
+  airPlenum.renderOrder = 2;
+  xrayLayers.add(airPlenum);
+
   const fanStack = cylinder(0.53, 0.34, materials.darkMetal, { position: [0, 2.32, 0], segments: 56, name: "fan-stack" });
   group.add(fanStack);
   shells.push(fanStack);
@@ -74,7 +126,7 @@ export function buildCoolingTower(options = {}) {
   const waterGroup = new THREE.Group();
   waterGroup.name = "falling-water";
   const waterMaterial = emissive(COLORS.coolingSupply, 0.8);
-  for (let index = 0; index < 28; index += 1) {
+  for (let index = 0; index < 56; index += 1) {
     const drop = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), waterMaterial);
     const x = -0.95 + ((index * 0.37) % 1.9);
     const z = -0.55 + ((index * 0.29) % 1.1);
@@ -82,7 +134,7 @@ export function buildCoolingTower(options = {}) {
     drop.scale.y = 2.2;
     drop.name = `tower-water-drop-${index + 1}`;
     waterGroup.add(drop);
-    droplets.push({ mesh: drop, baseY: drop.position.y, phase: index / 28, minY: 0.48, maxY: 1.78, speed: 0.48 + (index % 4) * 0.05 });
+    droplets.push({ mesh: drop, baseY: drop.position.y, phase: index / 56, minY: 0.48, maxY: 1.78, speed: 0.22 + (index % 4) * 0.018 });
   }
   group.add(waterGroup);
   internals.push(waterGroup);
@@ -90,12 +142,12 @@ export function buildCoolingTower(options = {}) {
   const airGroup = new THREE.Group();
   airGroup.name = "rising-air";
   const airMaterial = new THREE.MeshBasicMaterial({ color: 0x9af4e9, transparent: true, opacity: 0.48, toneMapped: false, depthWrite: false });
-  for (let index = 0; index < 10; index += 1) {
-    const mote = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), airMaterial);
+  for (let index = 0; index < 24; index += 1) {
+    const mote = new THREE.Mesh(new THREE.CapsuleGeometry(0.025, 0.13, 4, 8), airMaterial);
     mote.position.set(-0.75 + ((index * 0.41) % 1.5), 0.62 + ((index * 0.27) % 1.7), -0.35 + ((index * 0.33) % 0.7));
     mote.name = `tower-air-mote-${index + 1}`;
     airGroup.add(mote);
-    airflow.push({ mesh: mote, phase: index / 10, minY: 0.58, maxY: 2.72, speed: 0.28 + (index % 3) * 0.04 });
+    airflow.push({ mesh: mote, phase: index / 24, minY: 0.58, maxY: 2.72, speed: 0.1 + (index % 3) * 0.012 });
   }
   group.add(airGroup);
   internals.push(airGroup);

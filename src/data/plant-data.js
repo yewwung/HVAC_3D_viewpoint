@@ -69,7 +69,7 @@ export const EQUIPMENT = Object.freeze([
     status: "运行",
     load: 71,
     position: [2.1, 0.15, -5.65],
-    internals: ["布水盘", "喷淋支管", "PVC 填料", "集水盘", "轴流风机"],
+    internals: ["热水布水盘", "喷淋支管", "PVC 填料", "收水器", "冷水集水盘", "上升气流", "轴流风机"],
     metrics: [metric("进水", "32.0", "°C"), metric("出水", "27.0", "°C"), metric("风机", "36.5", "Hz")],
   },
   {
@@ -80,7 +80,7 @@ export const EQUIPMENT = Object.freeze([
     status: "运行",
     load: 69,
     position: [5.0, 0.15, -5.65],
-    internals: ["布水盘", "喷淋支管", "PVC 填料", "集水盘", "轴流风机"],
+    internals: ["热水布水盘", "喷淋支管", "PVC 填料", "收水器", "冷水集水盘", "上升气流", "轴流风机"],
     metrics: [metric("进水", "31.8", "°C"), metric("出水", "27.1", "°C"), metric("风机", "35.8", "Hz")],
   },
   {
@@ -91,7 +91,7 @@ export const EQUIPMENT = Object.freeze([
     status: "运行",
     load: 63,
     position: [5.25, 0.15, 0.45],
-    internals: ["新风入口", "初效过滤器", "冷却盘管", "加热段", "加湿段", "送风机", "出风段"],
+    internals: ["防雨百叶", "G4 初效过滤器", "F8 中效过滤器", "表冷除湿盘管", "再热盘管", "蒸汽加湿段", "送风机", "消声送风段"],
     metrics: [
       metric("新风温度", "30.4", "°C"),
       metric("新风湿度", "68", "%RH"),

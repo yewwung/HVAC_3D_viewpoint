@@ -20,7 +20,7 @@ export function setEquipmentXray(equipment, enabled) {
   }
 
   for (const internal of equipment.userData.internals ?? []) {
-    internal.visible = true;
+    internal.visible = internal.userData.xrayOnly ? Boolean(enabled) : true;
     internal.traverse((object) => {
       if (object.isMesh) object.renderOrder = enabled ? 5 : 0;
     });

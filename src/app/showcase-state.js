@@ -46,6 +46,7 @@ export function createShowcaseState(initialState = {}) {
       update({
         xrayEnabled: Boolean(enabled),
         mode: enabled ? "xray" : state.mode === "xray" ? "overview" : state.mode,
+        pipesVisible: enabled ? true : state.pipesVisible,
       });
     },
     toggleTour() {

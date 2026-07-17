@@ -13,6 +13,7 @@ const AIRFLOW_COLORS = Object.freeze({
 const SECTION_ORDER = Object.freeze([
   "intake-louver",
   "pre-filter",
+  "medium-filter",
   "cooling-coil",
   "heating-section",
   "humidifier",
@@ -45,9 +46,14 @@ export function buildMau(options = {}) {
   group.add(intake);
   internals.push(intake);
 
-  const preFilter = createFilter("pre-filter", -2.35, standard(0x7ca6aa, { roughness: 0.55, metalness: 0.14 }), materials);
+  const preFilter = createFilter("pre-filter", -2.48, standard(0x7ca6aa, { roughness: 0.55, metalness: 0.14 }), materials);
   group.add(preFilter);
   internals.push(preFilter);
+
+  const mediumFilter = createFilter("medium-filter", -2.08, standard(0xe0eee9, { roughness: 0.62, metalness: 0.08 }), materials);
+  mediumFilter.scale.set(1, 0.92, 0.92);
+  group.add(mediumFilter);
+  internals.push(mediumFilter);
 
   const coolingCoil = createCoil(materials, fluidPaths);
   coolingCoil.position.x = -1.48;
@@ -74,6 +80,14 @@ export function buildMau(options = {}) {
   outlet.rotation.y = Math.PI;
   group.add(outlet);
   internals.push(outlet);
+
+  const silencer = createSilencer(materials);
+  group.add(silencer);
+  internals.push(silencer);
+
+  const sectionMarkers = createSectionMarkers();
+  group.add(sectionMarkers);
+  internals.push(sectionMarkers);
 
   const airflowZones = createAirflowZones();
   group.add(airflowZones);
@@ -106,7 +120,7 @@ export function buildMau(options = {}) {
       phase: index / AIRFLOW_PARTICLE_COUNT,
       minX: -3.04,
       maxX: 3.04,
-      speed: 0.36 + (index % 7) * 0.018,
+      speed: 0.075 + (index % 7) * 0.003,
       colorZones: [-1.56, -0.82, -0.16],
       materials: airMaterials,
     });
@@ -125,6 +139,58 @@ export function buildMau(options = {}) {
   group.userData.focusPoint = new THREE.Vector3(0, 1.05, 0);
   group.userData.focusDistance = 7.15;
   markEquipment(group, id);
+  return group;
+}
+
+function createSectionMarkers() {
+  const group = new THREE.Group();
+  group.name = "mau-section-markers";
+  const sections = [
+    { id: "intake", x: -2.98, width: 0.34, color: AIRFLOW_COLORS.warm },
+    { id: "filtration", x: -2.3, width: 0.76, color: 0xd7e0df },
+    { id: "cooling", x: -1.48, width: 0.68, color: AIRFLOW_COLORS.cool },
+    { id: "reheat", x: -0.58, width: 0.62, color: AIRFLOW_COLORS.warm },
+    { id: "humidification", x: 0.3, width: 0.62, color: AIRFLOW_COLORS.supply },
+    { id: "fan", x: 1.18, width: 0.68, color: 0x45df8a },
+    { id: "silencer", x: 2.18, width: 0.92, color: 0x9ab6bd },
+    { id: "supply", x: 2.98, width: 0.3, color: AIRFLOW_COLORS.supply },
+  ];
+  for (const section of sections) {
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: section.color, transparent: true, opacity: 0.9, toneMapped: false, depthWrite: false });
+    const floorStrip = box([section.width, 0.035, 0.055], markerMaterial, {
+      position: [section.x, 0.3, 0.77],
+      name: `section-marker-${section.id}`,
+      castShadow: false,
+      receiveShadow: false,
+    });
+    const roofStrip = box([section.width, 0.035, 0.04], markerMaterial, {
+      position: [section.x, 1.79, 0.77],
+      name: `section-marker-${section.id}-roof`,
+      castShadow: false,
+      receiveShadow: false,
+    });
+    floorStrip.renderOrder = 9;
+    roofStrip.renderOrder = 9;
+    group.add(floorStrip, roofStrip);
+  }
+  return group;
+}
+
+function createSilencer(materials) {
+  const group = new THREE.Group();
+  group.name = "supply-silencer";
+  group.position.x = 2.18;
+  const splitterMaterial = standard(0x789197, { roughness: 0.66, metalness: 0.28 });
+  for (const z of [-0.48, -0.16, 0.16, 0.48]) {
+    group.add(box([0.86, 1.18, 0.08], splitterMaterial, {
+      position: [0, 1.05, z],
+      name: `silencer-splitter-${z}`,
+    }));
+    group.add(box([0.9, 0.045, 0.11], materials.cabinetEdge, {
+      position: [0, 1.64, z],
+      name: `silencer-cap-${z}`,
+    }));
+  }
   return group;
 }
 

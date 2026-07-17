@@ -22,6 +22,12 @@ export function buildScrewChiller(options = {}) {
   const internals = [];
   const fluidPaths = [];
   const rotors = [];
+  const xrayLayers = new THREE.Group();
+  xrayLayers.name = "chiller-xray-layers";
+  xrayLayers.userData.xrayOnly = true;
+  xrayLayers.visible = false;
+  group.add(xrayLayers);
+  internals.push(xrayLayers);
 
   const add = (object, category = null) => {
     group.add(object);
@@ -41,6 +47,8 @@ export function buildScrewChiller(options = {}) {
     length: 5.35,
     shellMaterial: materials.industrialBlueShell,
     bundleMaterial: materials.copper,
+    fluidColor: COLORS.chilledSupply,
+    xrayLayers,
   });
   createShellAndTubeExchanger({
     group,
@@ -52,11 +60,16 @@ export function buildScrewChiller(options = {}) {
     length: 5.05,
     shellMaterial: materials.industrialBlueShell.clone(),
     bundleMaterial: materials.brass,
+    fluidColor: COLORS.coolingReturn,
+    xrayLayers,
   });
 
   const compressor = createCompressor(materials, rotors, internals, shells);
   compressor.position.set(1.45, 1.92, -0.28);
   add(compressor);
+  const compressorCutaway = createCompressorCutaway(materials);
+  compressorCutaway.position.copy(compressor.position);
+  xrayLayers.add(compressorCutaway);
 
   const cabinet = createControlCabinet(materials, shells, internals);
   cabinet.position.set(-0.75, 2.13, 0.18);
@@ -113,7 +126,7 @@ function createSkid(group, materials) {
   }
 }
 
-function createShellAndTubeExchanger({ group, materials, add, name, position, radius, length, shellMaterial, bundleMaterial }) {
+function createShellAndTubeExchanger({ group, materials, add, name, position, radius, length, shellMaterial, bundleMaterial, fluidColor, xrayLayers }) {
   const shell = cylinder(radius, length, shellMaterial, {
     position,
     rotation: [0, 0, Math.PI / 2],
@@ -122,9 +135,10 @@ function createShellAndTubeExchanger({ group, materials, add, name, position, ra
   });
   add(shell, "shell");
 
-  const bundle = createTubeBundle({ length: length - 0.34, radius, tubeRadius: 0.022, material: bundleMaterial, name: `${name}-tube-bundle`, rows: 6, columns: 7 });
+  const bundle = createTubeBundle({ length: length - 0.46, radius, tubeRadius: 0.018, material: bundleMaterial, name: `${name}-tube-bundle`, rows: 5, columns: 6 });
   bundle.position.fromArray(position);
   add(bundle, "internal");
+  xrayLayers.add(createExchangerCutaway({ name, position, radius, length, fluidColor, materials }));
 
   const frontFlange = createFlangeEnd({ radius, material: materials.industrialBlue, boltMaterial: materials.chrome, name: `${name}-front-flange`, side: -1, boltCount: 18 });
   frontFlange.position.set(position[0] - length / 2 - 0.09, position[1], position[2]);
@@ -164,6 +178,71 @@ function createShellAndTubeExchanger({ group, materials, add, name, position, ra
   add(drain, "internal");
 }
 
+function createExchangerCutaway({ name, position, radius, length, fluidColor, materials }) {
+  const group = new THREE.Group();
+  group.name = `${name}-cutaway-assembly`;
+
+  const cutawayMaterial = standard(0x8ba6ae, {
+    roughness: 0.24,
+    metalness: 0.7,
+    transparent: true,
+    opacity: 0.42,
+    side: THREE.DoubleSide,
+  });
+  cutawayMaterial.depthWrite = false;
+  const cutawayShell = new THREE.Mesh(
+    new THREE.CylinderGeometry(radius * 1.02, radius * 1.02, length * 0.91, 64, 1, true, Math.PI * 0.16, Math.PI * 1.38),
+    cutawayMaterial,
+  );
+  cutawayShell.name = `${name}-cutaway-shell`;
+  cutawayShell.position.fromArray(position);
+  cutawayShell.rotation.z = Math.PI / 2;
+  cutawayShell.renderOrder = 4;
+  group.add(cutawayShell);
+
+  const fluidMaterial = new THREE.MeshBasicMaterial({
+    color: fluidColor,
+    transparent: true,
+    opacity: 0.11,
+    depthWrite: false,
+    toneMapped: false,
+    side: THREE.DoubleSide,
+  });
+  const fluidVolume = cylinder(radius * 0.83, length * 0.82, fluidMaterial, {
+    position,
+    rotation: [0, 0, Math.PI / 2],
+    segments: 48,
+    name: `${name}-fluid-volume`,
+    castShadow: false,
+    receiveShadow: false,
+  });
+  fluidVolume.renderOrder = 2;
+  group.add(fluidVolume);
+
+  const sheetMaterial = standard(0xb9c8ca, { roughness: 0.2, metalness: 0.82, transparent: true, opacity: 0.55, side: THREE.DoubleSide });
+  sheetMaterial.depthWrite = false;
+  const tubeSheet = cylinder(radius * 0.86, 0.07, sheetMaterial, {
+    position: [position[0] - length * 0.38, position[1], position[2]],
+    rotation: [0, 0, Math.PI / 2],
+    segments: 56,
+    name: `${name}-tube-sheet`,
+  });
+  tubeSheet.renderOrder = 3;
+  group.add(tubeSheet);
+
+  const baffleMaterial = standard(0xd7e0df, { roughness: 0.24, metalness: 0.76, transparent: true, opacity: 0.68, side: THREE.DoubleSide });
+  baffleMaterial.depthWrite = false;
+  for (let index = -2; index <= 2; index += 1) {
+    const baffle = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.72, 0.018, 8, 42), baffleMaterial);
+    baffle.name = `${name}-baffle-${index + 3}`;
+    baffle.position.set(position[0] + index * length * 0.13, position[1], position[2]);
+    baffle.rotation.y = Math.PI / 2;
+    baffle.renderOrder = 5;
+    group.add(baffle);
+  }
+  return group;
+}
+
 function createCompressor(materials, rotors, internals, shells) {
   const group = new THREE.Group();
   group.name = "compressor";
@@ -193,6 +272,53 @@ function createCompressor(materials, rotors, internals, shells) {
   const terminalBox = box([0.62, 0.46, 0.5], materials.cabinet, { position: [-1.25, 0.46, 0], name: "compressor-terminal-box" });
   group.add(terminalBox);
   shells.push(terminalBox);
+  return group;
+}
+
+function createCompressorCutaway(materials) {
+  const group = new THREE.Group();
+  group.name = "compressor-cutaway-assembly";
+  const casingMaterial = standard(0xa8bcc2, { roughness: 0.22, metalness: 0.76, transparent: true, opacity: 0.48, side: THREE.DoubleSide });
+  casingMaterial.depthWrite = false;
+  const casing = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.51, 0.51, 2.05, 56, 1, true, Math.PI * 0.18, Math.PI * 1.32),
+    casingMaterial,
+  );
+  casing.name = "compressor-cutaway-casing";
+  casing.position.x = 0.12;
+  casing.rotation.z = Math.PI / 2;
+  casing.renderOrder = 4;
+  group.add(casing);
+
+  const chamberMaterial = new THREE.MeshBasicMaterial({ color: 0x18c8ff, transparent: true, opacity: 0.08, depthWrite: false, toneMapped: false });
+  const chamber = cylinder(0.34, 1.72, chamberMaterial, {
+    position: [0.2, 0, 0],
+    rotation: [0, 0, Math.PI / 2],
+    segments: 48,
+    name: "compressor-rotor-chamber",
+    castShadow: false,
+    receiveShadow: false,
+  });
+  group.add(chamber);
+
+  const statorMaterial = standard(0x6f8990, { roughness: 0.24, metalness: 0.82, transparent: true, opacity: 0.52, side: THREE.DoubleSide });
+  statorMaterial.depthWrite = false;
+  const stator = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.39, 0.39, 0.66, 48, 1, true, Math.PI * 0.12, Math.PI * 1.4),
+    statorMaterial,
+  );
+  stator.name = "compressor-motor-stator";
+  stator.position.x = -1.4;
+  stator.rotation.z = Math.PI / 2;
+  group.add(stator);
+
+  for (const x of [-0.64, 0.94]) {
+    const bearing = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.035, 10, 36), materials.brass);
+    bearing.name = `compressor-bearing-${x}`;
+    bearing.position.x = x;
+    bearing.rotation.y = Math.PI / 2;
+    group.add(bearing);
+  }
   return group;
 }
 
