@@ -142,6 +142,20 @@ test("MAU uses an inline EC backward-curved centrifugal plug fan", () => {
   assert.equal(mau.getObjectByName("supply-fan-hub"), undefined);
 });
 
+test("MAU airflow turns through the centrifugal fan before plenum recovery", () => {
+  const mau = buildMau({ id: "MAU-01" });
+  const paths = mau.userData.animation.airflow.filter((item) => item.curve);
+  assert.ok(paths.length >= 60);
+  assert.deepEqual(mau.userData.fanAirflowStages, ["axial-intake", "radial-discharge", "plenum-recovery"]);
+
+  const [beforeEye, eye, radial, recovered] = [1, 2, 3, 4].map((index) => paths[0].curve.points[index]);
+  const eyeRadius = Math.hypot(eye.y - 1.02, eye.z);
+  const radialRadius = Math.hypot(radial.y - 1.02, radial.z);
+  assert.ok(beforeEye.x < eye.x);
+  assert.ok(radialRadius > eyeRadius + 0.2);
+  assert.ok(recovered.x > radial.x);
+});
+
 test("xray mode fades registered shells and restores their materials", () => {
   const chiller = buildScrewChiller();
   const shell = chiller.userData.shells[0];

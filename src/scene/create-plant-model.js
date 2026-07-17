@@ -10,6 +10,9 @@ import { buildWaterHeader } from "./equipment/water-header.js";
 import { setEquipmentXray } from "./equipment/xray.js";
 import { buildFlowSystem, setFlowSystemXray, updateFlowSystems } from "./flow-system.js";
 
+const PARTICLE_AXIS = new THREE.Vector3(0, 1, 0);
+const PARTICLE_TANGENT = new THREE.Vector3();
+
 export function createPlantModel() {
   const group = new THREE.Group();
   group.name = "HVAC-PLANT";
@@ -80,8 +83,17 @@ export function updatePlantModel(model, delta, elapsed, options = {}) {
   for (const item of model.animation.airflow) {
     const speed = Math.abs(item.speed) * motionScale;
     const t = (item.phase + elapsed * speed) % 1;
-    if (item.minX !== undefined) item.mesh.position.x = THREE.MathUtils.lerp(item.minX, item.maxX, t);
-    else item.mesh.position.y = THREE.MathUtils.lerp(item.minY, item.maxY, t);
+    if (item.curve) {
+      const point = Number.isFinite(t) ? item.curve.getPointAt(t) : null;
+      if (!point) continue;
+      item.mesh.position.copy(point);
+      const tangent = item.curve.getTangentAt(t, PARTICLE_TANGENT).normalize();
+      item.mesh.quaternion.setFromUnitVectors(PARTICLE_AXIS, tangent);
+    } else if (item.minX !== undefined) {
+      item.mesh.position.x = THREE.MathUtils.lerp(item.minX, item.maxX, t);
+    } else {
+      item.mesh.position.y = THREE.MathUtils.lerp(item.minY, item.maxY, t);
+    }
     if (item.materials && item.colorZones) {
       const [coolingStart, reheatStart, supplyStart] = item.colorZones;
       const x = item.mesh.position.x;

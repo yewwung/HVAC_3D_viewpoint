@@ -107,19 +107,21 @@ export function buildMau(options = {}) {
   };
   for (let index = 0; index < AIRFLOW_PARTICLE_COUNT; index += 1) {
     const particle = new THREE.Mesh(airGeometry, airMaterials.warm);
-    particle.rotation.z = Math.PI / 2;
     const laneY = 0.42 + (index % 7) * 0.205 + Math.sin(index * 1.7) * 0.035;
     const laneZ = -0.58 + (index % 6) * 0.232 + Math.cos(index * 1.3) * 0.025;
-    particle.position.set(-3.04 + ((index * 0.397) % 6.08), laneY, laneZ);
+    const curve = createMauAirflowCurve(laneY, laneZ, index);
+    const phase = index / AIRFLOW_PARTICLE_COUNT;
+    particle.position.copy(curve.getPointAt(phase));
+    const tangent = curve.getTangentAt(phase, new THREE.Vector3()).normalize();
+    particle.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tangent);
     particle.scale.set(0.75 + (index % 4) * 0.12, 0.8, 0.8);
     particle.name = `mau-air-particle-${index + 1}`;
     particle.renderOrder = 8;
     airGroup.add(particle);
     airflow.push({
       mesh: particle,
-      phase: index / AIRFLOW_PARTICLE_COUNT,
-      minX: -3.04,
-      maxX: 3.04,
+      curve,
+      phase,
       speed: 0.075 + (index % 7) * 0.003,
       colorZones: [-1.56, -0.82, -0.16],
       materials: airMaterials,
@@ -135,11 +137,26 @@ export function buildMau(options = {}) {
   group.userData.shells = shells;
   group.userData.internals = internals;
   group.userData.sectionOrder = [...SECTION_ORDER];
+  group.userData.fanAirflowStages = ["axial-intake", "radial-discharge", "plenum-recovery"];
   group.userData.animation = { rotors, airflow, fluidPaths, droplets: humidifier.userData.droplets };
   group.userData.focusPoint = new THREE.Vector3(0, 1.05, 0);
   group.userData.focusDistance = 7.15;
   markEquipment(group, id);
   return group;
+}
+
+function createMauAirflowCurve(laneY, laneZ, index) {
+  const angle = (index * Math.PI * 2) / 7;
+  const radialY = Math.cos(angle) * 0.46;
+  const radialZ = Math.sin(angle) * 0.46;
+  return new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-3.04, laneY, laneZ),
+    new THREE.Vector3(0.76, laneY, laneZ),
+    new THREE.Vector3(1.05, 1.02 + (laneY - 1.02) * 0.12, laneZ * 0.12),
+    new THREE.Vector3(1.24, 1.02 + radialY, radialZ),
+    new THREE.Vector3(1.62, laneY, laneZ),
+    new THREE.Vector3(3.04, laneY, laneZ),
+  ], false, "catmullrom", 0.08);
 }
 
 function createSectionMarkers() {

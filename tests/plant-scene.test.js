@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createPlantModel, setPlantPresentation } from "../src/scene/create-plant-model.js";
+import { createPlantModel, setPlantPresentation, updatePlantModel } from "../src/scene/create-plant-model.js";
 
 test("plant model assembles equipment and four animated water circuits", () => {
   const model = createPlantModel();
@@ -57,4 +57,13 @@ test("MAU mode isolates the cutaway and hides the plant environment", () => {
   assert.equal(model.pipeNetwork.visible, false);
   assert.equal(model.group.getObjectByName("plant-floor").visible, false);
   assert.equal(model.group.getObjectByName("plant-grid").visible, false);
+});
+
+test("plant animation advances MAU airflow along its curve", () => {
+  const model = createPlantModel();
+  const particle = model.animation.airflow.find((item) => item.curve);
+  assert.ok(particle, "a curved MAU airflow particle should be registered");
+  const before = particle.mesh.position.clone();
+  updatePlantModel(model, 0.016, 1.5);
+  assert.notDeepEqual(particle.mesh.position.toArray(), before.toArray());
 });
