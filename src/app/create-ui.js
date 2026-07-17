@@ -28,7 +28,7 @@ const COMPONENT_LABELS = [
   ["MAU-01", "cooling-coil", "表冷除湿盘管"],
   ["MAU-01", "heating-section", "再热盘管"],
   ["MAU-01", "humidifier", "蒸汽加湿"],
-  ["MAU-01", "supply-fan", "送风机"],
+  ["MAU-01", "supply-fan", "EC 插入式离心风机"],
   ["MAU-01", "supply-silencer", "消声段"],
   ["MAU-01", "outlet-section", "出风段"],
 ];
