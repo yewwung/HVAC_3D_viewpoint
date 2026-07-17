@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as THREE from "three";
 
 import { buildScrewChiller } from "../src/scene/equipment/chiller.js";
 import { buildCoolingTower } from "../src/scene/equipment/cooling-tower.js";
@@ -81,11 +82,9 @@ test("MAU exposes each functional section in airflow order", () => {
   assert.ok(mau.userData.animation.fluidPaths.length >= 4);
   assert.ok(mau.userData.animation.rotors.length >= 1);
   assert.ok(Math.max(...mau.userData.animation.airflow.map((item) => item.speed)) <= 0.1);
-  assert.equal(mau.getObjectByName("supply-fan-casing").rotation.y, 0);
-  assert.equal(mau.getObjectByName("supply-fan-rotor").rotation.y, 0);
 });
 
-test("MAU treatment faces are orthogonal and the supply fan is recognizable", () => {
+test("MAU treatment faces are orthogonal", () => {
   const mau = buildMau({ id: "MAU-01" });
   const treatmentFaces = [];
   mau.traverse((object) => {
@@ -102,13 +101,45 @@ test("MAU treatment faces are orthogonal and the supply fan is recognizable", ()
   for (const face of treatmentFaces) {
     assert.ok(Math.abs(face.rotation.z) < 1e-8, `${face.name} should be vertical`);
   }
+});
 
+test("MAU uses an inline EC backward-curved centrifugal plug fan", () => {
+  const mau = buildMau({ id: "MAU-01" });
+  const fan = mau.getObjectByName("supply-fan");
   const rotor = mau.getObjectByName("supply-fan-rotor");
   const blades = rotor.children.filter((child) => child.name.startsWith("supply-fan-blade-"));
-  assert.ok(mau.getObjectByName("supply-fan-backplate"));
-  assert.ok(mau.getObjectByName("supply-fan-drive-motor"));
-  assert.equal(blades.length, 9);
-  assert.equal(blades.every((blade) => blade.geometry.type === "ExtrudeGeometry"), true);
+
+  for (const name of [
+    "supply-fan-inlet-panel",
+    "supply-fan-inlet-cone",
+    "supply-fan-front-shroud",
+    "supply-fan-rear-disc",
+    "supply-fan-drive-motor",
+    "supply-fan-support-frame",
+  ]) assert.ok(mau.getObjectByName(name), `${name} should exist`);
+
+  for (let index = 1; index <= 4; index += 1) {
+    assert.ok(mau.getObjectByName(`supply-fan-isolator-${index}`));
+  }
+
+  assert.equal(blades.length, 7);
+  for (const blade of blades) {
+    blade.geometry.computeBoundingBox();
+    const size = blade.geometry.boundingBox.getSize(new THREE.Vector3());
+    assert.equal(blade.geometry.type, "ExtrudeGeometry");
+    assert.ok(size.z >= 0.2, `${blade.name} should have axial depth`);
+  }
+
+  const axis = new THREE.Vector3(0, 0, 1).applyQuaternion(fan.quaternion).normalize();
+  assert.ok(Math.abs(axis.x) > 0.999);
+  assert.ok(Math.abs(axis.y) < 1e-8);
+  assert.ok(Math.abs(axis.z) < 1e-8);
+
+  mau.updateMatrixWorld(true);
+  const inletX = mau.getObjectByName("supply-fan-inlet-cone").getWorldPosition(new THREE.Vector3()).x;
+  const motorX = mau.getObjectByName("supply-fan-drive-motor").getWorldPosition(new THREE.Vector3()).x;
+  assert.ok(inletX < motorX, "inlet should be upstream of the motor");
+  assert.equal(mau.getObjectByName("supply-fan-hub"), undefined);
 });
 
 test("xray mode fades registered shells and restores their materials", () => {

@@ -395,58 +395,117 @@ function createHumidifier(materials) {
   return group;
 }
 
+function createAnnularGeometry(outerRadius, innerRadius, depth) {
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, outerRadius, 0, Math.PI * 2, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, innerRadius, 0, Math.PI * 2, true);
+  shape.holes.push(hole);
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth,
+    steps: 1,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    bevelSize: 0.01,
+    bevelThickness: 0.01,
+  });
+  geometry.translate(0, 0, -depth / 2);
+  return geometry;
+}
+
 function createSupplyFan(materials) {
   const group = new THREE.Group();
   group.name = "supply-fan";
+  group.rotation.y = -Math.PI / 2;
 
-  const backplate = new THREE.Group();
-  backplate.name = "supply-fan-backplate";
-  const backplateMaterial = standard(0xbfd0d2, { roughness: 0.34, metalness: 0.52, emissive: 0x5c7e84, emissiveIntensity: 0.08 });
-  backplate.add(box([1.3, 0.18, 0.07], backplateMaterial, { position: [0, 0.56, 0], name: "supply-fan-backplate-top" }));
-  backplate.add(box([1.3, 0.18, 0.07], backplateMaterial, { position: [0, -0.56, 0], name: "supply-fan-backplate-bottom" }));
-  backplate.add(box([0.18, 0.94, 0.07], backplateMaterial, { position: [-0.56, 0, 0], name: "supply-fan-backplate-left" }));
-  backplate.add(box([0.18, 0.94, 0.07], backplateMaterial, { position: [0.56, 0, 0], name: "supply-fan-backplate-right" }));
-  group.add(backplate);
+  const steel = standard(0x9fb2b5, { roughness: 0.38, metalness: 0.58 });
+  const wheel = standard(0x397f8b, { roughness: 0.26, metalness: 0.68, emissive: 0x164d57, emissiveIntensity: 0.12 });
+  const shroud = physical(0x8bb7bd, { roughness: 0.22, metalness: 0.46, transparent: true, opacity: 0.56 });
+  const frameMaterial = standard(0x4a5b5e, { roughness: 0.48, metalness: 0.64 });
 
-  const driveMotor = new THREE.Group();
-  driveMotor.name = "supply-fan-drive-motor";
-  driveMotor.position.z = -0.08;
-  driveMotor.add(cylinder(0.22, 0.34, materials.industrialBlue, { rotation: [Math.PI / 2, 0, 0], segments: 28, name: "supply-fan-drive-motor-body" }));
-  driveMotor.add(cylinder(0.14, 0.12, materials.chrome, { position: [0, 0, 0.22], rotation: [Math.PI / 2, 0, 0], segments: 24, name: "supply-fan-drive-motor-shaft" }));
-  for (let z = -0.12; z <= 0.12; z += 0.06) {
-    const fin = new THREE.Mesh(new THREE.TorusGeometry(0.225, 0.012, 8, 28), materials.darkMetal);
-    fin.position.z = z;
-    fin.name = `supply-fan-motor-fin-${z}`;
-    driveMotor.add(fin);
-  }
-  group.add(driveMotor);
+  const inletPanel = new THREE.Group();
+  inletPanel.name = "supply-fan-inlet-panel";
+  inletPanel.position.z = 0.34;
+  inletPanel.add(box([1.3, 0.16, 0.07], steel, { position: [0, 0.57, 0], name: "supply-fan-panel-top" }));
+  inletPanel.add(box([1.3, 0.16, 0.07], steel, { position: [0, -0.57, 0], name: "supply-fan-panel-bottom" }));
+  inletPanel.add(box([0.16, 0.98, 0.07], steel, { position: [-0.57, 0, 0], name: "supply-fan-panel-left" }));
+  inletPanel.add(box([0.16, 0.98, 0.07], steel, { position: [0.57, 0, 0], name: "supply-fan-panel-right" }));
+  group.add(inletPanel);
 
-  const casingMaterial = standard(0xd4e3e4, { roughness: 0.26, metalness: 0.62, emissive: 0x8fb7bd, emissiveIntensity: 0.08 });
-  const casing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.08, 14, 52), casingMaterial);
-  casing.name = "supply-fan-casing";
-  casing.position.z = 0.16;
-  group.add(casing);
+  const bellmouthProfile = [
+    new THREE.Vector2(0.4, -0.1),
+    new THREE.Vector2(0.405, -0.05),
+    new THREE.Vector2(0.43, 0.02),
+    new THREE.Vector2(0.48, 0.08),
+    new THREE.Vector2(0.52, 0.1),
+  ];
+  const cone = new THREE.Mesh(new THREE.LatheGeometry(bellmouthProfile, 48), steel);
+  cone.name = "supply-fan-inlet-cone";
+  cone.position.z = 0.23;
+  cone.rotation.x = Math.PI / 2;
+  cone.castShadow = true;
+  group.add(cone);
 
   const rotor = new THREE.Group();
   rotor.name = "supply-fan-rotor";
-  rotor.position.z = 0.2;
+  const frontShroud = new THREE.Mesh(createAnnularGeometry(0.5, 0.2, 0.055), shroud);
+  frontShroud.name = "supply-fan-front-shroud";
+  frontShroud.position.z = 0.13;
+  rotor.add(frontShroud);
+  rotor.add(cylinder(0.48, 0.055, wheel, { position: [0, 0, -0.15], rotation: [Math.PI / 2, 0, 0], segments: 48, name: "supply-fan-rear-disc" }));
+
   const bladeShape = new THREE.Shape();
-  bladeShape.moveTo(0.1, -0.055);
-  bladeShape.lineTo(0.31, -0.13);
-  bladeShape.quadraticCurveTo(0.5, -0.16, 0.52, 0.015);
-  bladeShape.quadraticCurveTo(0.37, 0.04, 0.16, 0.115);
-  bladeShape.quadraticCurveTo(0.1, 0.105, 0.1, -0.055);
-  const bladeGeometry = new THREE.ExtrudeGeometry(bladeShape, { depth: 0.07, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.012, bevelThickness: 0.012 });
-  bladeGeometry.translate(0, 0, -0.035);
-  const bladeMaterial = standard(0x67d4e8, { roughness: 0.2, metalness: 0.68, emissive: 0x18c8ff, emissiveIntensity: 0.18 });
-  for (let index = 0; index < 9; index += 1) {
-    const blade = new THREE.Mesh(bladeGeometry, bladeMaterial);
-    blade.rotation.z = (index * Math.PI * 2) / 9 + 0.16;
+  bladeShape.moveTo(0.2, -0.035);
+  bladeShape.quadraticCurveTo(0.32, -0.15, 0.48, -0.085);
+  bladeShape.lineTo(0.47, 0.02);
+  bladeShape.quadraticCurveTo(0.33, -0.035, 0.21, 0.065);
+  bladeShape.closePath();
+  const bladeGeometry = new THREE.ExtrudeGeometry(bladeShape, {
+    depth: 0.24,
+    steps: 1,
+    bevelEnabled: true,
+    bevelSegments: 2,
+    bevelSize: 0.009,
+    bevelThickness: 0.009,
+  });
+  bladeGeometry.translate(0, 0, -0.13);
+  for (let index = 0; index < 7; index += 1) {
+    const blade = new THREE.Mesh(bladeGeometry, wheel);
     blade.name = `supply-fan-blade-${index + 1}`;
+    blade.rotation.z = (index * Math.PI * 2) / 7 + 0.12;
     blade.castShadow = true;
     rotor.add(blade);
   }
-  rotor.add(cylinder(0.13, 0.2, materials.chrome, { position: [0, 0, 0.04], rotation: [Math.PI / 2, 0, 0], segments: 28, name: "supply-fan-hub" }));
   group.add(rotor);
+
+  const motor = new THREE.Group();
+  motor.name = "supply-fan-drive-motor";
+  motor.position.z = -0.27;
+  motor.add(cylinder(0.21, 0.34, materials.industrialBlue, { rotation: [Math.PI / 2, 0, 0], segments: 32, name: "supply-fan-motor-body" }));
+  motor.add(cylinder(0.07, 0.22, materials.chrome, { position: [0, 0, 0.18], rotation: [Math.PI / 2, 0, 0], segments: 20, name: "supply-fan-motor-shaft" }));
+  for (let z = -0.12; z <= 0.12; z += 0.06) {
+    const fin = new THREE.Mesh(new THREE.TorusGeometry(0.215, 0.012, 8, 32), frameMaterial);
+    fin.position.z = z;
+    fin.name = `supply-fan-motor-fin-${z}`;
+    motor.add(fin);
+  }
+  group.add(motor);
+
+  const frame = new THREE.Group();
+  frame.name = "supply-fan-support-frame";
+  frame.add(box([1.12, 0.07, 0.07], frameMaterial, { position: [0, -0.62, -0.1], name: "supply-fan-frame-base" }));
+  for (const x of [-0.48, 0.48]) {
+    frame.add(box([0.07, 0.78, 0.07], frameMaterial, { position: [x, -0.25, -0.1], name: `supply-fan-frame-leg-${x}` }));
+  }
+  for (const [index, x] of [-0.34, 0.34].entries()) {
+    frame.add(tube([[x, -0.57, -0.08], [x * 0.58, -0.18, -0.28]], 0.025, frameMaterial, { name: `supply-fan-frame-strut-${index + 1}`, tubularSegments: 14 }));
+  }
+  group.add(frame);
+
+  const isolatorMaterial = standard(0x202a2c, { roughness: 0.72, metalness: 0.28 });
+  [[-0.46, -0.68, 0.22], [0.46, -0.68, 0.22], [-0.46, -0.68, -0.32], [0.46, -0.68, -0.32]].forEach((position, index) => {
+    group.add(cylinder(0.055, 0.08, isolatorMaterial, { position, segments: 16, name: `supply-fan-isolator-${index + 1}` }));
+  });
+
   return group;
 }
