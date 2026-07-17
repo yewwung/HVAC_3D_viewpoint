@@ -102,7 +102,7 @@ export function createShowcaseScene({ canvas, onEquipmentSelect, onTourInterrupt
     const baseDistance = equipment.userData.focusDistance ?? 6;
     const distance = equipmentId === "MAU-01" && mobile ? baseDistance * 1.86 : baseDistance;
     const direction = equipmentId === "MAU-01"
-      ? new THREE.Vector3(-0.18, 0.24, 1.0).normalize()
+      ? new THREE.Vector3(-0.25, 0.24, 1.0).normalize()
       : new THREE.Vector3(1.15, 0.62, 1.25).normalize();
     beginCameraTween(focus.clone().add(direction.multiplyScalar(distance)), focus);
     selectEquipment(equipmentId);

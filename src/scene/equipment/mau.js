@@ -71,7 +71,7 @@ export function buildMau(options = {}) {
   internals.push(humidifier);
 
   const fan = createSupplyFan(materials);
-  fan.position.set(1.18, 1.02, 0);
+  fan.position.set(1.18, 1.02, 0.16);
   group.add(fan);
   internals.push(fan);
   rotors.push(fan.getObjectByName("supply-fan-rotor"));
@@ -436,8 +436,8 @@ function createSupplyFan(materials) {
   group.rotation.y = -Math.PI / 2;
 
   const steel = standard(0x9fb2b5, { roughness: 0.38, metalness: 0.58 });
-  const wheel = standard(0x397f8b, { roughness: 0.26, metalness: 0.68, emissive: 0x164d57, emissiveIntensity: 0.12 });
-  const shroud = physical(0x8bb7bd, { roughness: 0.22, metalness: 0.46, transparent: true, opacity: 0.56 });
+  const wheel = standard(0x4a8f99, { roughness: 0.26, metalness: 0.68, emissive: 0x164d57, emissiveIntensity: 0.12 });
+  const shroud = physical(0x8bb7bd, { roughness: 0.22, metalness: 0.46, transparent: true, opacity: 0.34 });
   const frameMaterial = standard(0x4a5b5e, { roughness: 0.48, metalness: 0.64 });
 
   const inletPanel = new THREE.Group();
@@ -468,6 +468,8 @@ function createSupplyFan(materials) {
   const frontShroud = new THREE.Mesh(createAnnularGeometry(0.5, 0.2, 0.055), shroud);
   frontShroud.name = "supply-fan-front-shroud";
   frontShroud.position.z = 0.13;
+  frontShroud.material.depthWrite = false;
+  frontShroud.renderOrder = 5;
   rotor.add(frontShroud);
   rotor.add(cylinder(0.48, 0.055, wheel, { position: [0, 0, -0.15], rotation: [Math.PI / 2, 0, 0], segments: 48, name: "supply-fan-rear-disc" }));
 
@@ -486,11 +488,17 @@ function createSupplyFan(materials) {
     bevelThickness: 0.009,
   });
   bladeGeometry.translate(0, 0, -0.13);
+  const bladeEdges = new THREE.EdgesGeometry(bladeGeometry, 28);
+  const bladeEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x93d7df, transparent: true, opacity: 0.55, toneMapped: false });
   for (let index = 0; index < 7; index += 1) {
     const blade = new THREE.Mesh(bladeGeometry, wheel);
     blade.name = `supply-fan-blade-${index + 1}`;
     blade.rotation.z = (index * Math.PI * 2) / 7 + 0.12;
     blade.castShadow = true;
+    const edges = new THREE.LineSegments(bladeEdges, bladeEdgeMaterial);
+    edges.name = `fan-blade-edge-${index + 1}`;
+    edges.renderOrder = 6;
+    blade.add(edges);
     rotor.add(blade);
   }
   group.add(rotor);
