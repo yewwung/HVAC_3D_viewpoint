@@ -85,6 +85,32 @@ test("MAU exposes each functional section in airflow order", () => {
   assert.equal(mau.getObjectByName("supply-fan-rotor").rotation.y, 0);
 });
 
+test("MAU treatment faces are orthogonal and the supply fan is recognizable", () => {
+  const mau = buildMau({ id: "MAU-01" });
+  const treatmentFaces = [];
+  mau.traverse((object) => {
+    if (
+      ["pre-filter-media", "medium-filter-media"].includes(object.name)
+      || object.name.startsWith("cooling-fin-")
+      || object.name.startsWith("heating-fin-")
+    ) {
+      treatmentFaces.push(object);
+    }
+  });
+
+  assert.equal(treatmentFaces.length, 22);
+  for (const face of treatmentFaces) {
+    assert.ok(Math.abs(face.rotation.z) < 1e-8, `${face.name} should be vertical`);
+  }
+
+  const rotor = mau.getObjectByName("supply-fan-rotor");
+  const blades = rotor.children.filter((child) => child.name.startsWith("supply-fan-blade-"));
+  assert.ok(mau.getObjectByName("supply-fan-backplate"));
+  assert.ok(mau.getObjectByName("supply-fan-drive-motor"));
+  assert.equal(blades.length, 9);
+  assert.equal(blades.every((blade) => blade.geometry.type === "ExtrudeGeometry"), true);
+});
+
 test("xray mode fades registered shells and restores their materials", () => {
   const chiller = buildScrewChiller();
   const shell = chiller.userData.shells[0];

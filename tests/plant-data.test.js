@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   EQUIPMENT,
+  HYDRONIC_LOOPS,
+  MAU_PROCESS_STAGES,
   REFRIGERATION_CYCLE,
   WATER_CIRCUITS,
   getEquipmentById,
@@ -44,4 +46,21 @@ test("equipment metrics expose useful display values with units", () => {
   const values = chiller.metrics.map((metric) => `${metric.label}:${metric.value}${metric.unit}`);
 
   assert.deepEqual(values, ["冷冻供水:7.0°C", "冷冻回水:12.0°C", "流量:468m³/h", "COP:5.82"]);
+});
+
+test("MAU process stages explain the eight treatment functions in order", () => {
+  assert.equal(Array.isArray(MAU_PROCESS_STAGES), true);
+  assert.deepEqual(
+    MAU_PROCESS_STAGES.map((stage) => stage.id),
+    ["intake", "filtration", "cooling", "reheat", "humidification", "fan", "silencer", "supply"],
+  );
+  assert.equal(MAU_PROCESS_STAGES.every((stage, index) => stage.index === index + 1 && stage.title && stage.detail), true);
+});
+
+test("hydronic loop descriptions follow chilled-water and cooling-water physics", () => {
+  assert.equal(Array.isArray(HYDRONIC_LOOPS), true);
+  const loops = Object.fromEntries(HYDRONIC_LOOPS.map((loop) => [loop.id, loop]));
+
+  assert.deepEqual(loops.chilled.steps.map((step) => step.id), ["chwr", "chw-pump", "evaporator", "chws", "mau-coil"]);
+  assert.deepEqual(loops.cooling.steps.map((step) => step.id), ["cws", "cw-pump", "condenser", "cwr", "cooling-tower"]);
 });

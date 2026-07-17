@@ -1,6 +1,6 @@
 import { Box, createIcons, Orbit, RotateCcw, Route, ScanLine, Tags, Wind, Workflow, X } from "lucide";
 
-import { EQUIPMENT, getEquipmentById } from "../data/plant-data.js";
+import { HYDRONIC_LOOPS, MAU_PROCESS_STAGES, getEquipmentById } from "../data/plant-data.js";
 
 const LABEL_IDS = ["CH-01", "P-CHW-01", "P-CW-01", "CT-01", "CT-02", "MAU-01"];
 const COMPONENT_LABELS = [
@@ -46,9 +46,13 @@ export function createUi({ store, sceneController }) {
   const modeName = document.querySelector("#current-mode");
   const loading = document.querySelector("#loading-state");
   const toolbar = document.querySelector("#view-toolbar");
+  const processRail = document.querySelector("#mau-process-rail");
+  const hydronicLegend = document.querySelector("#hydronic-loop-legend");
   const controls = [...toolbar.querySelectorAll("button[data-action]")];
   const labels = createEquipmentLabels(labelLayer, store, sceneController);
   const componentLabels = createComponentLabels(componentLayer, sceneController);
+  processRail.innerHTML = renderMauProcessMarkup();
+  hydronicLegend.innerHTML = renderHydronicLoopsMarkup();
 
   createIcons({
     icons: { Box, Orbit, RotateCcw, Route, ScanLine, Tags, Wind, Workflow, X },
@@ -207,4 +211,33 @@ export function isControlActive(action, state) {
     (action === "pipes" && state.pipesVisible) ||
     (action === "labels" && state.labelsVisible)
   );
+}
+
+export function renderMauProcessMarkup(stages = MAU_PROCESS_STAGES) {
+  const items = stages.map((stage) => `
+    <li data-stage="${stage.id}" style="--stage-color: ${stage.color}">
+      <span>${String(stage.index).padStart(2, "0")} · ${stage.code}</span>
+      <strong>${stage.title}</strong>
+      <small>${stage.detail}</small>
+    </li>`).join("");
+
+  return `
+    <div class="process-rail-heading"><span>AIR PATH</span><strong>空气处理顺序</strong></div>
+    <ol>${items}</ol>`;
+}
+
+export function renderHydronicLoopsMarkup(loops = HYDRONIC_LOOPS) {
+  return loops.map((loop) => {
+    const flow = loop.steps.map((step, index) => `
+      <li class="loop-step" style="--step-color: ${step.color}">
+        <span>${step.label}</span>
+        <small>${step.detail}</small>
+      </li>${index < loop.steps.length - 1 ? '<li class="loop-arrow" aria-hidden="true">›</li>' : ""}`).join("");
+
+    return `
+      <section class="hydronic-loop" data-loop="${loop.id}">
+        <header><span>${loop.code}</span><strong>${loop.title}</strong><small>${loop.detail}</small></header>
+        <ol>${flow}</ol>
+      </section>`;
+  }).join("");
 }

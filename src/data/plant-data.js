@@ -132,6 +132,48 @@ export const WATER_CIRCUITS = Object.freeze([
   Object.freeze({ id: "cwr", name: "冷却回水", abbreviation: "CWR", color: "#ff8b3d", temperatureC: 32, flowM3h: 572, route: ["CH-01", "CT-01"] }),
 ]);
 
+export const MAU_PROCESS_STAGES = Object.freeze([
+  Object.freeze({ id: "intake", index: 1, code: "OA", title: "进风", detail: "室外新风引入", color: "#ff4d52" }),
+  Object.freeze({ id: "filtration", index: 2, code: "G4/F8", title: "两级过滤", detail: "拦截粗尘与细颗粒", color: "#d7e0df" }),
+  Object.freeze({ id: "cooling", index: 3, code: "CC", title: "降温除湿", detail: "表冷盘管冷凝除湿", color: "#18c8ff" }),
+  Object.freeze({ id: "reheat", index: 4, code: "RH", title: "再热调温", detail: "抬升干球温度防过冷", color: "#ff8b3d" }),
+  Object.freeze({ id: "humidification", index: 5, code: "HUM", title: "蒸汽加湿", detail: "补充空气含湿量", color: "#55f1df" }),
+  Object.freeze({ id: "fan", index: 6, code: "FAN", title: "风机增压", detail: "插入式风机克服阻力", color: "#45df8a" }),
+  Object.freeze({ id: "silencer", index: 7, code: "SIL", title: "消声整流", detail: "降低噪声并稳定气流", color: "#9ab6bd" }),
+  Object.freeze({ id: "supply", index: 8, code: "SA", title: "送风", detail: "16.2°C 处理空气送出", color: "#55f1df" }),
+]);
+
+const hydronicStep = (id, label, detail, color) => Object.freeze({ id, label, detail, color });
+
+export const HYDRONIC_LOOPS = Object.freeze([
+  Object.freeze({
+    id: "chilled",
+    code: "CHW",
+    title: "冷冻水闭环",
+    detail: "从末端回水，经蒸发器降温后返回 MAU",
+    steps: Object.freeze([
+      hydronicStep("chwr", "CHWR", "12°C 回水", "#3d63c8"),
+      hydronicStep("chw-pump", "冷冻水泵", "输送", "#6d8de4"),
+      hydronicStep("evaporator", "蒸发器", "吸热降温", "#29c6ff"),
+      hydronicStep("chws", "CHWS", "7°C 供水", "#27b7ff"),
+      hydronicStep("mau-coil", "MAU 盘管", "空气侧吸热", "#18c8ff"),
+    ]),
+  }),
+  Object.freeze({
+    id: "cooling",
+    code: "CW",
+    title: "冷却水闭环",
+    detail: "冷却塔供水吸收冷凝热，再回塔向室外散热",
+    steps: Object.freeze([
+      hydronicStep("cws", "CWS", "27°C 供水", "#1fc7a5"),
+      hydronicStep("cw-pump", "冷却水泵", "输送", "#45d7b8"),
+      hydronicStep("condenser", "冷凝器", "吸收冷凝热", "#f2ad42"),
+      hydronicStep("cwr", "CWR", "32°C 回水", "#ff8b3d"),
+      hydronicStep("cooling-tower", "冷却塔", "蒸发散热", "#55f1df"),
+    ]),
+  }),
+]);
+
 export const REFRIGERATION_CYCLE = Object.freeze([
   Object.freeze({ id: "compression", index: 1, name: "压缩", component: "compressor", color: "#ff6b45", description: "低温低压制冷剂蒸气被压缩为高温高压气体" }),
   Object.freeze({ id: "condensation", index: 2, name: "冷凝", component: "condenser", color: "#ffb23f", description: "制冷剂向冷却水放热并凝结为高压液体" }),
