@@ -1,6 +1,7 @@
 {
   "name": "hvac-3d-viewpoint",
   "version": "1.0.0",
+  "description": "Interactive HVAC water-cooled plant digital twin with animated internal flows",
   "author": "yewwung <yewwung@163.com>",
   "private": true,
   "type": "module",

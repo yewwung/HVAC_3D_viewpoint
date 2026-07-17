@@ -79,7 +79,9 @@ export function updateFlowSystems(flowSystems, elapsed, motionScale = 1) {
   for (const system of flowSystems) {
     for (const particle of system.particles) {
       const t = (particle.phase + elapsed * particle.speed * motionScale) % 1;
-      particle.mesh.position.copy(particle.curve.getPointAt(t));
+      const point = Number.isFinite(t) ? particle.curve.getPointAt(t) : null;
+      if (!point) continue;
+      particle.mesh.position.copy(point);
       const pulse = 0.9 + Math.sin((elapsed * 7 + particle.phase * 12) * Math.PI) * 0.18;
       particle.mesh.scale.setScalar(pulse);
     }

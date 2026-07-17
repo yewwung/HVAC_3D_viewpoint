@@ -1,0 +1,188 @@
+import { Box, createIcons, Orbit, RotateCcw, Route, ScanLine, Tags, Workflow, X } from "lucide";
+
+import { EQUIPMENT, getEquipmentById } from "../data/plant-data.js";
+
+const LABEL_IDS = ["CH-01", "P-CHW-01", "P-CW-01", "CT-01", "CT-02", "MAU-01"];
+const COMPONENT_LABELS = [
+  ["CH-01", "evaporator-shell", "蒸发器"],
+  ["CH-01", "condenser-shell", "冷凝器"],
+  ["CH-01", "compressor", "螺杆压缩机"],
+  ["CH-01", "expansion-valve", "电子膨胀阀"],
+  ["MAU-01", "intake-louver", "新风入口"],
+  ["MAU-01", "pre-filter", "初效过滤"],
+  ["MAU-01", "cooling-coil", "冷却盘管"],
+  ["MAU-01", "heating-section", "加热段"],
+  ["MAU-01", "humidifier", "加湿段"],
+  ["MAU-01", "supply-fan", "送风机"],
+  ["MAU-01", "outlet-section", "出风段"],
+];
+
+export function createUi({ store, sceneController }) {
+  const equipmentPanel = document.querySelector("#equipment-panel");
+  const panelTitle = document.querySelector("#equipment-title");
+  const panelId = document.querySelector("#equipment-id");
+  const panelStatus = document.querySelector("#equipment-status");
+  const panelMetrics = document.querySelector("#equipment-metrics");
+  const panelInternals = document.querySelector("#equipment-internals");
+  const panelXray = document.querySelector("#panel-xray");
+  const labelLayer = document.querySelector("#equipment-labels");
+  const componentLayer = document.querySelector("#component-labels");
+  const modeName = document.querySelector("#current-mode");
+  const loading = document.querySelector("#loading-state");
+  const toolbar = document.querySelector("#view-toolbar");
+  const controls = [...toolbar.querySelectorAll("button[data-action]")];
+  const labels = createEquipmentLabels(labelLayer, store, sceneController);
+  const componentLabels = createComponentLabels(componentLayer, sceneController);
+
+  createIcons({
+    icons: { Box, Orbit, RotateCcw, Route, ScanLine, Tags, Workflow, X },
+    attrs: { "stroke-width": 1.8, "aria-hidden": "true" },
+  });
+
+  toolbar.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    const action = button.dataset.action;
+    if (action === "overview") {
+      store.selectEquipment(null);
+      store.setMode("overview");
+      if (!store.getState().pipesVisible) store.togglePipes();
+      sceneController.resetView();
+    } else if (action === "principle") {
+      store.selectEquipment("CH-01");
+      store.setMode("principle");
+      if (store.getState().pipesVisible) store.togglePipes();
+      sceneController.focusEquipment("CH-01");
+    } else if (action === "xray") {
+      const targetId = store.getState().selectedEquipmentId ?? "CH-01";
+      store.selectEquipment(targetId);
+      store.setXray(true);
+      if (store.getState().pipesVisible) store.togglePipes();
+      sceneController.focusEquipment(targetId);
+    } else if (action === "tour") {
+      store.toggleTour();
+    } else if (action === "pipes") {
+      store.togglePipes();
+    } else if (action === "labels") {
+      store.toggleLabels();
+    } else if (action === "reset") {
+      sceneController.resetView();
+    }
+  });
+
+  document.querySelector("#panel-close").addEventListener("click", () => store.selectEquipment(null));
+  panelXray.addEventListener("click", () => {
+    const targetId = store.getState().selectedEquipmentId;
+    if (!targetId) return;
+    store.setXray(true);
+    if (store.getState().pipesVisible) store.togglePipes();
+    sceneController.focusEquipment(targetId);
+  });
+
+  return {
+    render(state) {
+      document.documentElement.dataset.mode = state.mode;
+      modeName.textContent = modeLabel(state.mode);
+      labelLayer.hidden = !state.labelsVisible;
+      for (const button of controls) updateControl(button, state);
+      for (const [id, label] of labels) {
+        label.classList.toggle("is-selected", state.selectedEquipmentId === id);
+        label.setAttribute("aria-pressed", String(state.selectedEquipmentId === id));
+      }
+      const componentTarget = state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
+      for (const item of componentLabels) item.element.hidden = item.equipmentId !== componentTarget;
+      renderEquipmentPanel({ equipmentPanel, panelTitle, panelId, panelStatus, panelMetrics, panelInternals, panelXray }, state);
+    },
+    hideLoading() {
+      loading.classList.add("is-hidden");
+    },
+    showError(message) {
+      loading.classList.remove("is-hidden");
+      loading.classList.add("has-error");
+      loading.querySelector("strong").textContent = "3D 场景未能启动";
+      loading.querySelector("span").textContent = message;
+    },
+  };
+}
+
+function createComponentLabels(container, sceneController) {
+  return COMPONENT_LABELS.map(([equipmentId, componentName, labelText]) => {
+    const element = document.createElement("span");
+    element.className = "component-label";
+    element.textContent = labelText;
+    element.hidden = true;
+    container.append(element);
+    sceneController.registerComponentLabel(equipmentId, componentName, element);
+    return { equipmentId, componentName, element };
+  });
+}
+
+function createEquipmentLabels(container, store, sceneController) {
+  const labels = new Map();
+  for (const id of LABEL_IDS) {
+    const equipment = getEquipmentById(id);
+    if (!equipment) continue;
+    const label = document.createElement("button");
+    label.type = "button";
+    label.className = "equipment-label";
+    label.dataset.equipmentId = id;
+    label.setAttribute("aria-label", `查看 ${equipment.name}`);
+    label.innerHTML = `<span>${equipment.id}</span><strong>${equipment.shortName}</strong><small>${equipment.status} · ${equipment.load}%</small>`;
+    label.addEventListener("click", () => {
+      store.selectEquipment(id);
+      sceneController.focusEquipment(id);
+    });
+    container.append(label);
+    labels.set(id, label);
+    sceneController.registerLabel(id, label);
+  }
+  return labels;
+}
+
+function updateControl(button, state) {
+  const action = button.dataset.action;
+  const active =
+    (action === state.mode) ||
+    (action === "xray" && state.xrayEnabled) ||
+    (action === "tour" && state.tourEnabled) ||
+    (action === "pipes" && state.pipesVisible) ||
+    (action === "labels" && state.labelsVisible);
+  button.classList.toggle("is-active", active);
+  if (["overview", "principle", "xray", "tour", "pipes", "labels"].includes(action)) {
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function renderEquipmentPanel(elements, state) {
+  const equipment = getEquipmentById(state.selectedEquipmentId);
+  elements.equipmentPanel.hidden = !equipment;
+  if (!equipment) return;
+  elements.panelTitle.textContent = equipment.name;
+  elements.panelId.textContent = equipment.id;
+  elements.panelStatus.textContent = equipment.status;
+  elements.panelStatus.dataset.status = equipment.status;
+  elements.panelMetrics.replaceChildren(...equipment.metrics.map(createMetric));
+  elements.panelInternals.replaceChildren(...equipment.internals.map(createInternal));
+  elements.panelXray.classList.toggle("is-active", state.xrayEnabled);
+  elements.panelXray.setAttribute("aria-pressed", String(state.xrayEnabled));
+}
+
+function createMetric(metric) {
+  const row = document.createElement("div");
+  const label = document.createElement("span");
+  label.textContent = metric.label;
+  const value = document.createElement("strong");
+  value.textContent = `${metric.value}${metric.unit}`;
+  row.append(label, value);
+  return row;
+}
+
+function createInternal(name) {
+  const item = document.createElement("li");
+  item.textContent = name;
+  return item;
+}
+
+function modeLabel(mode) {
+  return { overview: "系统运行", principle: "制冷循环", xray: "设备透视" }[mode] ?? "系统运行";
+}

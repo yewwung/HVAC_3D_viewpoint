@@ -34,4 +34,9 @@ test("principle mode opens the chiller internals by default", () => {
 
   assert.equal(model.equipment.get("CH-01").userData.xrayEnabled, true);
   assert.equal(model.equipment.get("MAU-01").userData.xrayEnabled, false);
+  assert.equal(model.equipment.get("CH-01").visible, true);
+  assert.equal(model.equipment.get("MAU-01").visible, false);
+
+  setPlantPresentation(model, { mode: "overview", selectedEquipmentId: null, pipesVisible: true });
+  assert.equal(model.equipment.get("MAU-01").visible, true);
 });

@@ -1,32 +1,78 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-mode="overview" data-cycle-stage="-1">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>暖通空调水冷系统机房 3D</title>
+    <meta name="author" content="yewwung" />
+    <meta name="creator" content="yewwung" />
+    <meta name="lastModifiedBy" content="yewwung" />
+    <meta name="description" content="可交互、可透视的中央空调水冷系统 3D 数字孪生展示" />
+    <title>HVAC 水冷机房数字孪生</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="scene-shell" aria-label="暖通空调水冷系统机房三维渲染">
-      <canvas id="scene-canvas"></canvas>
+    <main class="showcase-shell" aria-label="中央空调水冷系统 3D 数字孪生">
+      <canvas id="scene-canvas" aria-label="可旋转的暖通设备三维场景"></canvas>
+      <div class="scene-vignette" aria-hidden="true"></div>
 
-      <section class="system-panel" aria-label="系统信息">
-        <p class="eyebrow">HVAC Water-cooled Plant</p>
-        <h1>中央空调水冷系统 3D 机房</h1>
-        <div class="metrics">
-          <span>冷冻泵 -> 主机蒸发器 -> 分水器</span>
-          <span>冷却泵 -> 主机冷凝器 -> 冷却塔</span>
-          <span>分水器 / 集水器 / AHU 末端</span>
+      <header class="topbar">
+        <div class="product-identity">
+          <span class="identity-mark" aria-hidden="true">DT</span>
+          <div><strong>中央空调水冷机房</strong><span>HVAC DIGITAL TWIN · PLANT 01</span></div>
         </div>
+        <div class="plant-readings" aria-label="系统运行摘要">
+          <div><span>运行模式</span><strong id="current-mode">系统运行</strong></div>
+          <div><span>系统负载</span><strong>72%</strong></div>
+          <div class="health"><span>机房状态</span><strong><i></i>正常</strong></div>
+        </div>
+      </header>
+
+      <section class="cycle-panel" aria-label="制冷循环">
+        <div class="cycle-heading"><span>REFRIGERATION CYCLE</span><strong>制冷剂循环</strong></div>
+        <ol>
+          <li><span>01</span><div><strong>压缩</strong><small>低压气体 → 高压气体</small></div></li>
+          <li><span>02</span><div><strong>冷凝</strong><small>向冷却水放热</small></div></li>
+          <li><span>03</span><div><strong>节流</strong><small>降压降温</small></div></li>
+          <li><span>04</span><div><strong>蒸发</strong><small>吸收冷冻水热量</small></div></li>
+        </ol>
       </section>
 
-      <aside class="legend" aria-label="管线图例">
-        <div><span class="swatch swatch-chws"></span>冷冻供水 CHWS</div>
-        <div><span class="swatch swatch-chwr"></span>冷冻回水 CHWR</div>
-        <div><span class="swatch swatch-cws"></span>冷却供水 CWS</div>
-        <div><span class="swatch swatch-cwr"></span>冷却回水 CWR</div>
+      <div id="equipment-labels" class="equipment-labels" aria-label="设备数据标签"></div>
+      <div id="component-labels" class="component-labels" aria-label="设备内部组件标签"></div>
+
+      <aside id="equipment-panel" class="equipment-panel" aria-live="polite" hidden>
+        <div class="panel-heading">
+          <div><span id="equipment-id">CH-01</span><h2 id="equipment-title">螺杆式水冷冷水机组</h2></div>
+          <button id="panel-close" class="icon-button" type="button" aria-label="关闭设备面板" title="关闭"><i data-lucide="x"></i></button>
+        </div>
+        <div class="status-line"><span>运行状态</span><strong id="equipment-status" data-status="运行">运行</strong></div>
+        <div id="equipment-metrics" class="equipment-metrics"></div>
+        <div class="internal-heading"><span>INTERNAL COMPONENTS</span><strong>内部组件</strong></div>
+        <ul id="equipment-internals" class="internal-list"></ul>
+        <button id="panel-xray" class="panel-command" type="button" aria-pressed="false"><i data-lucide="scan-line"></i><span>设备透视</span></button>
       </aside>
+
+      <aside class="pipe-legend" aria-label="管线图例">
+        <span><i class="legend-line chws"></i>CHWS <small>7.0°C</small></span>
+        <span><i class="legend-line chwr"></i>CHWR <small>12.0°C</small></span>
+        <span><i class="legend-line cws"></i>CWS <small>27.0°C</small></span>
+        <span><i class="legend-line cwr"></i>CWR <small>32.0°C</small></span>
+      </aside>
+
+      <nav id="view-toolbar" class="view-toolbar" aria-label="3D 视图控制">
+        <button type="button" data-action="overview" aria-label="系统全景" title="系统全景"><i data-lucide="box"></i><span>全景</span></button>
+        <button type="button" data-action="principle" aria-label="制冷循环" title="制冷循环"><i data-lucide="workflow"></i><span>原理</span></button>
+        <button type="button" data-action="xray" aria-label="设备透视" title="设备透视"><i data-lucide="scan-line"></i><span>透视</span></button>
+        <span class="toolbar-divider" aria-hidden="true"></span>
+        <button type="button" data-action="tour" aria-label="自动巡航" title="自动巡航"><i data-lucide="orbit"></i><span>巡航</span></button>
+        <button type="button" data-action="pipes" aria-label="显示管网" title="显示管网"><i data-lucide="route"></i><span>管网</span></button>
+        <button type="button" data-action="labels" aria-label="显示数据标签" title="显示数据标签"><i data-lucide="tags"></i><span>标签</span></button>
+        <button type="button" data-action="reset" aria-label="重置视角" title="重置视角"><i data-lucide="rotate-ccw"></i><span>重置</span></button>
+      </nav>
+
+      <div id="loading-state" class="loading-state" role="status">
+        <i></i><strong>正在装配数字孪生场景</strong><span>设备模型与流体动画加载中</span>
+      </div>
     </main>
     <script type="module" src="/src/main.js"></script>
   </body>

@@ -4,5 +4,7 @@ dist/
 *.log
 *.local
 outputs/
+output/
+.playwright-cli/
 .superpowers/
 .worktrees/

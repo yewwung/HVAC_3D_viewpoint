@@ -45,7 +45,10 @@ export function createPlantModel() {
 }
 
 export function setPlantPresentation(model, state) {
-  for (const equipment of model.equipment.values()) setEquipmentXray(equipment, false);
+  for (const [id, equipment] of model.equipment) {
+    setEquipmentXray(equipment, false);
+    equipment.visible = state.mode !== "principle" || id === "CH-01";
+  }
   const targetId = state.mode === "principle" ? "CH-01" : state.mode === "xray" ? state.selectedEquipmentId ?? "CH-01" : null;
   if (targetId && model.equipment.has(targetId)) setEquipmentXray(model.equipment.get(targetId), true);
   model.pipeNetwork.visible = state.pipesVisible !== false;
@@ -74,7 +77,8 @@ export function updatePlantModel(model, delta, elapsed, options = {}) {
   }
   for (const item of model.animation.internalFlowParticles) {
     const t = (item.phase + elapsed * item.speed * motionScale) % 1;
-    item.mesh.position.copy(item.curve.getPointAt(t));
+    const point = Number.isFinite(t) ? item.curve.getPointAt(t) : null;
+    if (point) item.mesh.position.copy(point);
   }
 }
 
